@@ -7,6 +7,9 @@
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -468,8 +471,40 @@
               <AidCenterView 
                 aidRequests={aidRequests}
                 helpPoints={helpPoints}
-                onRequestAid={() => { setReportType('aid'); setShowReportModal(true); }}
+                onRequestAid={(request) => {
+                  if (request) {
+                    setAidRequests(prev => [{
+                      ...request,
+                      id: 'A-' + Date.now(),
+                      status: 'PENDIENTE'
+                    }, ...prev]);
+                    showToast('Solicitud de ayuda enviada correctamente.');
+                  } else {
+                    setReportType('aid');
+                    setShowReportModal(true);
+                  }
+                }}
+                onUpdateAidRequest={(request) => {
+                  setAidRequests(prev => prev.map(item => item.id === request.id ? request : item));
+                  showToast('Solicitud de ayuda actualizada correctamente.');
+                }}
+                onDeleteAidRequest={(id) => {
+                  setAidRequests(prev => prev.filter(item => item.id !== id));
+                  showToast('Solicitud de ayuda eliminada.');
+                }}
                 onPledgeDonation={(req) => showToast(`¡Gracias! Se ha notificado al responsable de la solicitud #${req.id}`, 'success')}
+                onAddHelpPoint={(point) => {
+                  setHelpPoints(prev => [{ ...point, id: 'HP-' + Date.now() }, ...prev]);
+                  showToast('Punto de acopio agregado correctamente.');
+                }}
+                onUpdateHelpPoint={(point) => {
+                  setHelpPoints(prev => prev.map(item => item.id === point.id ? point : item));
+                  showToast('Punto de acopio actualizado correctamente.');
+                }}
+                onDeleteHelpPoint={(id) => {
+                  setHelpPoints(prev => prev.filter(item => item.id !== id));
+                  showToast('Punto de acopio eliminado.');
+                }}
               />
             )}
 
@@ -955,39 +990,42 @@
     }
 
     // --- AID CENTER & DONATION VIEW ---
-    function AidCenterView({ aidRequests, helpPoints, onRequestAid, onPledgeDonation }) {
+    function AidCenterView({ aidRequests, helpPoints, onRequestAid, onPledgeDonation, onAddHelpPoint, onUpdateHelpPoint, onDeleteHelpPoint, onUpdateAidRequest, onDeleteAidRequest }) {
       const [subTab, setSubTab] = useState('requests');
+      const [showPointForm, setShowPointForm] = useState(false);
+      const [editingPoint, setEditingPoint] = useState(null);
+      const [showAidForm, setShowAidForm] = useState(false);
+      const [editingAid, setEditingAid] = useState(null);
+
+      const openNewPoint = () => { setEditingPoint(null); setShowPointForm(true); };
+      const openEditPoint = (point) => { setEditingPoint(point); setShowPointForm(true); };
+      const handleDeletePoint = (point) => {
+        if (window.confirm(`¿Deseas eliminar el punto de acopio "${point.name}"?`)) onDeleteHelpPoint(point.id);
+      };
 
       return (
         <div className="space-y-5">
-          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-extrabold text-gray-800 flex items-center space-x-2">
-                <span>💖 Centro de Ayuda Humanitaria Animal</span>
-              </h2>
-              <p className="text-xs text-gray-500">Coordinación de insumos veterinarios, agua, alimento seco y transporte durante desastres.</p>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-gray-100">
+              <h2 className="text-xl font-extrabold text-gray-800 flex items-center space-x-2"><span>💖 Centro de Ayuda</span></h2>
+              <p className="text-xs text-gray-500 mt-1">Solicita ayuda para una mascota, consulta solicitudes y encuentra puntos de acopio.</p>
             </div>
+            <div className="p-3 bg-gray-50 flex flex-wrap gap-2">
+              <button onClick={() => setSubTab('requests')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${subTab === 'requests' ? 'bg-heartPink text-white' : 'bg-white text-gray-700 border border-gray-200'}`}>Solicitudes de Ayuda</button>
+              <button onClick={() => setSubTab('points')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${subTab === 'points' ? 'bg-info text-white' : 'bg-white text-gray-700 border border-gray-200'}`}>Puntos de Acopio</button>
+              {subTab === 'points' && <button onClick={openNewPoint} className="bg-brand text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Agregar Punto</button>}
+              <button onClick={() => setShowAidForm(true)} className="bg-brand text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Pedir Ayuda</button>
+            </div>
+          </div>
 
-            <div className="flex space-x-2">
-              <button 
-                onClick={() => setSubTab('requests')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold ${subTab === 'requests' ? 'bg-heartPink text-white' : 'bg-gray-100 text-gray-700'}`}
-              >
-                Solicitudes
-              </button>
-              <button 
-                onClick={() => setSubTab('points')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold ${subTab === 'points' ? 'bg-info text-white' : 'bg-gray-100 text-gray-700'}`}
-              >
-                Puntos de Acopio
-              </button>
-              <button 
-                onClick={onRequestAid}
-                className="bg-alert text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow"
-              >
-                + Pedir Ayuda
-              </button>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+            <div>
+              <h3 className="font-black text-gray-800">🚨 ¿Necesitas ayuda para una mascota?</h3>
+              <p className="text-xs text-gray-500">Solicita alimento, medicamentos y apoyo para una emergencia.</p>
             </div>
+            <button onClick={() => setShowAidForm(true)} className="bg-alert text-white px-5 py-2 rounded-lg text-xs font-black shadow">
+              + Pedir Ayuda
+            </button>
           </div>
 
           {subTab === 'requests' ? (
@@ -996,53 +1034,331 @@
                 <div key={req.id} className="bg-white p-4 rounded-xl shadow-sm border border-pink-100 space-y-3">
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-black uppercase text-white ${
-                        req.priority === 'URGENTE' ? 'bg-alert animate-pulse' : 'bg-heartPink'
-                      }`}>
-                        Prioridad: {req.priority}
-                      </span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-black uppercase text-white ${req.priority === 'URGENTE' ? 'bg-alert animate-pulse' : 'bg-heartPink'}`}>Prioridad: {req.priority}</span>
                       <h3 className="font-bold text-gray-800 text-base mt-1">{req.item}</h3>
                       <p className="text-xs text-gray-500">Cantidad requerida: <b>{req.quantity} {req.unit}</b></p>
                     </div>
                     <span className="text-xs text-gray-400">#{req.id}</span>
                   </div>
-
                   <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded">{req.description}</p>
-
-                  <div className="text-xs text-gray-500 flex justify-between items-center pt-2 border-t border-gray-100">
-                    <span>📍 {req.location}</span>
-                    <span>👤 {req.contactName}</span>
+                  <div className="text-xs text-gray-500 space-y-1 pt-2 border-t border-gray-100">
+                    <div>🐾 Especie: <b>{req.species || 'No especificada'}</b></div>
+                    <div>📍 {req.location}</div>
+                    <div>📞 {req.contactPhone || 'Sin teléfono'}</div>
                   </div>
-
-                  <button 
-                    onClick={() => onPledgeDonation(req)}
-                    className="w-full bg-brand hover:bg-brand-dark text-white font-bold py-2 rounded-lg text-xs shadow transition flex items-center justify-center space-x-1"
-                  >
-                    <span>🤝 Quiero Donar / Entregar Insumo</span>
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => onPledgeDonation(req)} className="flex-1 min-w-[160px] bg-brand hover:bg-brand-dark text-white font-bold py-2 rounded-lg text-xs shadow transition">🤝 Quiero Ayudar</button>
+                    <button onClick={() => setEditingAid(req)} className="bg-gray-700 text-white px-3 py-2 rounded-lg text-xs font-bold">✏️ Modificar</button>
+                    <button onClick={() => {
+                      if (window.confirm(`¿Deseas eliminar la solicitud ${req.id}?`)) onDeleteAidRequest(req.id);
+                    }} className="bg-alert text-white px-3 py-2 rounded-lg text-xs font-bold">🗑️ Eliminar</button>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {helpPoints.map(hp => (
-                <div key={hp.id} className="bg-white p-4 rounded-xl shadow-sm border border-blue-100 space-y-2">
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-brand text-base">{hp.name}</h3>
-                    <span className="text-xs px-2 py-0.5 rounded bg-teal-100 text-brand-dark font-bold">{hp.status}</span>
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div><h3 className="font-black text-gray-800">📍 Puntos de Acopio</h3><p className="text-xs text-gray-600">Consulta, agrega, modifica o elimina puntos de acopio disponibles para ayudar a los animales.</p></div>
+                <button onClick={openNewPoint} className="bg-brand text-white px-4 py-2 rounded-lg text-xs font-black shadow">+ Nuevo punto de acopio</button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {helpPoints.map(hp => (
+                  <div key={hp.id} className="bg-white p-4 rounded-xl shadow-sm border border-blue-100 space-y-2">
+                    <div className="flex justify-between items-start gap-2">
+                      <div><h3 className="font-bold text-brand text-base">{hp.name}</h3><span className="inline-block mt-1 text-xs px-2 py-0.5 rounded bg-teal-100 text-brand-dark font-bold">{hp.status}</span></div>
+                      <span className="text-[10px] text-gray-400">#{hp.id}</span>
+                    </div>
+                    <p className="text-xs text-gray-600">📍 Dirección: {hp.address}</p>
+                    <p className="text-xs text-gray-600">⏰ Horario de Atención: {hp.schedule}</p>
+                    <p className="text-xs text-gray-600">📦 Donaciones Aceptadas: {hp.acceptedDonations}</p>
+                    <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-2">
+                      <a href={`tel:${hp.phone}`} className="bg-info text-white px-3 py-1.5 rounded text-xs font-bold">📞 Llamar</a>
+                      <button onClick={() => openEditPoint(hp)} className="bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-bold">✏️ Modificar</button>
+                      <button onClick={() => handleDeletePoint(hp)} className="bg-alert text-white px-3 py-1.5 rounded text-xs font-bold">🗑️ Eliminar</button>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-600">📍 Dirección: {hp.address}</p>
-                  <p className="text-xs text-gray-600">⏰ Horario de Atención: {hp.schedule}</p>
-                  <p className="text-xs text-gray-600">📦 Donaciones Aceptadas: {hp.acceptedDonations}</p>
-                  <div className="pt-2">
-                    <a href={`tel:${hp.phone}`} className="inline-block bg-info text-white px-3 py-1.5 rounded text-xs font-bold">
-                      📞 Llamar al Punto ({hp.phone})
-                    </a>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              {helpPoints.length === 0 && <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500 text-sm">No hay puntos de acopio registrados.</div>}
             </div>
           )}
+
+          {showAidForm && (
+            <AidRequestModal
+              onClose={() => setShowAidForm(false)}
+              onSubmit={(request) => {
+                onRequestAid(request);
+                setShowAidForm(false);
+              }}
+            />
+          )}
+
+          {editingAid && (
+            <AidRequestEditModal
+              request={editingAid}
+              onClose={() => setEditingAid(null)}
+              onSave={(request) => {
+                onUpdateAidRequest(request);
+                setEditingAid(null);
+              }}
+            />
+          )}
+
+          {showPointForm && (
+            <HelpPointModal
+              point={editingPoint}
+              onClose={() => { setShowPointForm(false); setEditingPoint(null); }}
+              onSave={(point) => {
+                if (editingPoint) onUpdateHelpPoint(point); else onAddHelpPoint(point);
+                setShowPointForm(false); setEditingPoint(null);
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    function AidRequestModal({ onClose, onSubmit }) {
+      const [species, setSpecies] = useState('Perro');
+      const [helpType, setHelpType] = useState('Alimento');
+      const [foodType, setFoodType] = useState('Concentrado');
+      const [medication, setMedication] = useState('');
+      const [quantity, setQuantity] = useState('');
+      const [phone, setPhone] = useState('');
+      const [description, setDescription] = useState('');
+      const [location, setLocation] = useState('');
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+
+        if (!phone.trim() || !description.trim() || !location.trim()) {
+          alert('Indica un número de contacto, una descripción de la emergencia y la ubicación.');
+          return;
+        }
+
+        const item = helpType === 'Alimento'
+          ? `Alimento para ${species.toLowerCase()} — ${foodType}`
+          : `Medicamento para ${species.toLowerCase()}${medication.trim() ? ` — ${medication.trim()}` : ''}`;
+
+        onSubmit({
+          item,
+          species,
+          helpType,
+          foodType: helpType === 'Alimento' ? foodType : '',
+          medication: helpType === 'Medicamentos' ? medication : '',
+          quantity: quantity || 'Por determinar',
+          unit: helpType === 'Alimento' ? 'ración/paquete' : 'unidad',
+          priority: 'URGENTE',
+          location: location.trim(),
+          description: description.trim(),
+          contactName: 'Persona solicitante',
+          contactPhone: phone.trim()
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-black text-gray-800">🚨 Solicitar Ayuda para una Mascota</h2>
+                <p className="text-xs text-gray-500">Solicita alimento, medicamentos o atención ante una emergencia.</p>
+              </div>
+              <button onClick={onClose} className="w-9 h-9 rounded-lg bg-gray-100 text-xl font-bold">×</button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-black mb-1">Especie *</label>
+                  <select value={species} onChange={e => setSpecies(e.target.value)} className="w-full p-2.5 border rounded-lg">
+                    <option>Perro</option>
+                    <option>Gato</option>
+                    <option>Ave</option>
+                    <option>Conejo</option>
+                    <option>Otro</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black mb-1">¿Qué necesitas? *</label>
+                  <select value={helpType} onChange={e => setHelpType(e.target.value)} className="w-full p-2.5 border rounded-lg">
+                    <option>Alimento</option>
+                    <option>Medicamentos</option>
+                  </select>
+                </div>
+              </div>
+
+              {helpType === 'Alimento' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-black mb-1">Tipo de alimento *</label>
+                    <select value={foodType} onChange={e => setFoodType(e.target.value)} className="w-full p-2.5 border rounded-lg">
+                      <option>Concentrado</option>
+                      <option>Alimento húmedo</option>
+                      <option>Leche maternizada</option>
+                      <option>Alimento para cachorro</option>
+                      <option>Alimento para adulto</option>
+                      <option>Otro</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black mb-1">Cantidad aproximada</label>
+                    <input value={quantity} onChange={e => setQuantity(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="Ej. 5 kg" />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-black mb-1">Medicamento que necesita</label>
+                  <input value={medication} onChange={e => setMedication(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="Nombre del medicamento o insumo veterinario" />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-black mb-1">📞 Número para contactar *</label>
+                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="+57 300 123 4567" required />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black mb-1">📍 Ubicación *</label>
+                <input value={location} onChange={e => setLocation(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="Barrio, dirección o punto de referencia" required />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black mb-1">🚨 Descripción de la emergencia *</label>
+                <textarea value={description} onChange={e => setDescription(e.target.value)} className="w-full p-2.5 border rounded-lg min-h-[110px]" placeholder="Describe qué ocurrió, cuántos animales necesitan ayuda, estado de la mascota y cualquier información importante..." required />
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                ⚠️ Si se trata de una emergencia veterinaria crítica, esta solicitud sirve para coordinar ayuda comunitaria y no sustituye la atención profesional inmediata.
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg font-bold">Cancelar</button>
+                <button type="submit" className="px-5 py-2 bg-alert text-white rounded-lg font-black">🚨 Enviar solicitud</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    function AidRequestEditModal({ request, onClose, onSave }) {
+      const [species, setSpecies] = useState(request.species || 'Perro');
+      const [helpType, setHelpType] = useState(request.helpType || (request.item?.toLowerCase().includes('medicamento') ? 'Medicamentos' : 'Alimento'));
+      const [foodType, setFoodType] = useState(request.foodType || 'Concentrado');
+      const [medication, setMedication] = useState(request.medication || '');
+      const [quantity, setQuantity] = useState(request.quantity || '');
+      const [phone, setPhone] = useState(request.contactPhone || '');
+      const [description, setDescription] = useState(request.description || '');
+      const [location, setLocation] = useState(request.location || '');
+      const [priority, setPriority] = useState(request.priority || 'URGENTE');
+
+      const submit = (e) => {
+        e.preventDefault();
+        if (!phone.trim() || !description.trim() || !location.trim()) {
+          alert('Completa teléfono, ubicación y descripción.');
+          return;
+        }
+
+        const item = helpType === 'Alimento'
+          ? `Alimento para ${species.toLowerCase()} — ${foodType}`
+          : `Medicamento para ${species.toLowerCase()}${medication.trim() ? ` — ${medication.trim()}` : ''}`;
+
+        onSave({
+          ...request,
+          item,
+          species,
+          helpType,
+          foodType: helpType === 'Alimento' ? foodType : '',
+          medication: helpType === 'Medicamentos' ? medication : '',
+          quantity: quantity || 'Por determinar',
+          unit: helpType === 'Alimento' ? 'ración/paquete' : 'unidad',
+          priority,
+          location: location.trim(),
+          description: description.trim(),
+          contactPhone: phone.trim()
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 z-[120] bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl">
+            <div className="p-4 border-b flex justify-between items-center">
+              <div><h2 className="text-xl font-black text-gray-800">✏️ Modificar solicitud de ayuda</h2><p className="text-xs text-gray-500">Actualiza la información de la emergencia.</p></div>
+              <button onClick={onClose} className="w-9 h-9 rounded-lg bg-gray-100 text-xl font-bold">×</button>
+            </div>
+            <form onSubmit={submit} className="p-5 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><label className="block text-xs font-black mb-1">Especie *</label><select value={species} onChange={e => setSpecies(e.target.value)} className="w-full p-2.5 border rounded-lg"><option>Perro</option><option>Gato</option><option>Ave</option><option>Conejo</option><option>Otro</option></select></div>
+                <div><label className="block text-xs font-black mb-1">Necesidad *</label><select value={helpType} onChange={e => setHelpType(e.target.value)} className="w-full p-2.5 border rounded-lg"><option>Alimento</option><option>Medicamentos</option></select></div>
+              </div>
+              {helpType === 'Alimento' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div><label className="block text-xs font-black mb-1">Tipo de alimento</label><select value={foodType} onChange={e => setFoodType(e.target.value)} className="w-full p-2.5 border rounded-lg"><option>Concentrado</option><option>Alimento húmedo</option><option>Leche maternizada</option><option>Alimento para cachorro</option><option>Alimento para adulto</option><option>Otro</option></select></div>
+                  <div><label className="block text-xs font-black mb-1">Cantidad</label><input value={quantity} onChange={e => setQuantity(e.target.value)} className="w-full p-2.5 border rounded-lg" /></div>
+                </div>
+              ) : (
+                <div><label className="block text-xs font-black mb-1">Medicamento</label><input value={medication} onChange={e => setMedication(e.target.value)} className="w-full p-2.5 border rounded-lg" /></div>
+              )}
+              <div><label className="block text-xs font-black mb-1">📞 Número de contacto *</label><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full p-2.5 border rounded-lg" required /></div>
+              <div><label className="block text-xs font-black mb-1">📍 Ubicación *</label><input value={location} onChange={e => setLocation(e.target.value)} className="w-full p-2.5 border rounded-lg" required /></div>
+              <div><label className="block text-xs font-black mb-1">🚨 Descripción *</label><textarea value={description} onChange={e => setDescription(e.target.value)} className="w-full p-2.5 border rounded-lg min-h-[110px]" required /></div>
+              <div><label className="block text-xs font-black mb-1">Prioridad</label><select value={priority} onChange={e => setPriority(e.target.value)} className="w-full p-2.5 border rounded-lg"><option>URGENTE</option><option>ALTA</option><option>MEDIA</option></select></div>
+              <div className="flex justify-end gap-2 pt-2 border-t"><button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg font-bold">Cancelar</button><button type="submit" className="px-5 py-2 bg-brand text-white rounded-lg font-black">Guardar cambios</button></div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    function HelpPointModal({ point, onClose, onSave }) {
+      const [name, setName] = useState(point?.name || '');
+      const [address, setAddress] = useState(point?.address || '');
+      const [phone, setPhone] = useState(point?.phone || '');
+      const [schedule, setSchedule] = useState(point?.schedule || '');
+      const [acceptedDonations, setAcceptedDonations] = useState(point?.acceptedDonations || '');
+      const [status, setStatus] = useState(point?.status || 'Activo');
+      const [latitude, setLatitude] = useState(point?.latitude ?? 4.711);
+      const [longitude, setLongitude] = useState(point?.longitude ?? -74.072);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!name.trim() || !address.trim() || !phone.trim() || !schedule.trim() || !acceptedDonations.trim()) {
+          alert('Completa todos los campos del punto de acopio.');
+          return;
+        }
+        onSave({
+          ...(point || {}),
+          name: name.trim(), address: address.trim(), phone: phone.trim(),
+          schedule: schedule.trim(), acceptedDonations: acceptedDonations.trim(),
+          status, latitude: Number(latitude), longitude: Number(longitude)
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div><h2 className="text-xl font-black text-gray-800">{point ? '✏️ Modificar Punto de Acopio' : '📍 Agregar Punto de Acopio'}</h2><p className="text-xs text-gray-500">La información se guardará y aparecerá en el mapa.</p></div>
+              <button onClick={onClose} className="w-9 h-9 rounded-lg bg-gray-100 text-xl font-bold">×</button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2"><label className="block text-xs font-black mb-1">Nombre del punto *</label><input value={name} onChange={e => setName(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="Ej. Punto de Acopio Animalistas" required /></div>
+              <div className="md:col-span-2"><label className="block text-xs font-black mb-1">Dirección *</label><input value={address} onChange={e => setAddress(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="Ej. Calle 34 #19-05" required /></div>
+              <div><label className="block text-xs font-black mb-1">Teléfono *</label><input value={phone} onChange={e => setPhone(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="+57 300 123 4567" required /></div>
+              <div><label className="block text-xs font-black mb-1">Horario *</label><input value={schedule} onChange={e => setSchedule(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="24/7 Durante Emergencia" required /></div>
+              <div className="md:col-span-2"><label className="block text-xs font-black mb-1">Donaciones aceptadas *</label><input value={acceptedDonations} onChange={e => setAcceptedDonations(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="Alimento, Agua, Medicamentos, Mantas..." required /></div>
+              <div><label className="block text-xs font-black mb-1">Estado *</label><select value={status} onChange={e => setStatus(e.target.value)} className="w-full p-2.5 border rounded-lg"><option>Activo</option><option>Saturado</option><option>Cerrado</option></select></div>
+              <div><label className="block text-xs font-black mb-1">Latitud</label><input type="number" step="any" value={latitude} onChange={e => setLatitude(e.target.value)} className="w-full p-2.5 border rounded-lg" /></div>
+              <div><label className="block text-xs font-black mb-1">Longitud</label><input type="number" step="any" value={longitude} onChange={e => setLongitude(e.target.value)} className="w-full p-2.5 border rounded-lg" /></div>
+              <div className="md:col-span-2 flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg font-bold">Cancelar</button>
+                <button type="submit" className="px-5 py-2 bg-brand text-white rounded-lg font-black">{point ? 'Guardar cambios' : 'Agregar punto'}</button>
+              </div>
+            </form>
+          </div>
         </div>
       );
     }
@@ -1282,6 +1598,32 @@
       );
     }
 
+    const COLOMBIA_LOCATIONS = {
+      "Amazonas":["Leticia","Puerto Nariño"],"Antioquia":["Medellín","Bello","Envigado","Itagüí","Rionegro","Apartadó"],
+      "Arauca":["Arauca","Saravena","Tame"],"Atlántico":["Barranquilla","Soledad","Malambo","Puerto Colombia"],
+      "Bogotá D.C.":["Bogotá"],"Bolívar":["Cartagena","Magangué","Turbaco"],"Boyacá":["Tunja","Duitama","Sogamoso","Chiquinquirá"],
+      "Caldas":["Manizales","La Dorada","Chinchiná"],"Caquetá":["Florencia","San Vicente del Caguán"],
+      "Casanare":["Yopal","Aguazul","Villanueva"],"Cauca":["Popayán","Santander de Quilichao"],"Cesar":["Valledupar","Aguachica"],
+      "Chocó":["Quibdó","Istmina"],"Córdoba":["Montería","Cereté","Lorica"],
+      "Cundinamarca":["Soacha","Chía","Zipaquirá","Facatativá","Fusagasugá"],"Guainía":["Inírida"],
+      "Guaviare":["San José del Guaviare"],"Huila":["Neiva","Pitalito","Garzón"],"La Guajira":["Riohacha","Maicao","Uribia"],
+      "Magdalena":["Santa Marta","Ciénaga","Fundación"],"Meta":["Villavicencio","Acacías","Granada"],"Nariño":["Pasto","Ipiales","Tumaco"],
+      "Norte de Santander":["Cúcuta","Ocaña","Villa del Rosario"],"Putumayo":["Mocoa","Puerto Asís"],"Quindío":["Armenia","Calarcá","Montenegro"],
+      "Risaralda":["Pereira","Dosquebradas","Santa Rosa de Cabal"],"San Andrés y Providencia":["San Andrés"],
+      "Santander":["Bucaramanga","Floridablanca","Girón","Barrancabermeja","Piedecuesta"],"Sucre":["Sincelejo","Corozal"],
+      "Tolima":["Ibagué","Espinal","Melgar"],"Valle del Cauca":["Cali","Buenaventura","Palmira","Tuluá","Buga","Cartago"],
+      "Vaupés":["Mitú"],"Vichada":["Puerto Carreño"]
+    };
+
+    const CITY_CENTER = {
+      Bogotá:[4.711,-74.072],Soacha:[4.579,-74.216],Chía:[4.862,-74.058],Medellín:[6.244,-75.581],
+      Cali:[3.452,-76.532],Bucaramanga:[7.119,-73.122],Barranquilla:[10.968,-74.781],
+      Cartagena:[10.391,-75.479],Pereira:[4.814,-75.695],Manizales:[5.068,-75.517],
+      Armenia:[4.534,-75.675],Ibagué:[4.438,-75.232],Villavicencio:[4.142,-73.626],
+      Neiva:[2.938,-75.28],Pasto:[1.214,-77.278],Cúcuta:[7.89,-72.496],Santa_Marta:[11.241,-74.205],
+      Montería:[8.75,-75.88],Sincelejo:[9.304,-75.397],Valledupar:[10.474,-73.243],Tunja:[5.535,-73.367]
+    };
+
     // --- CREATE REPORT MODAL ---
     function CreateReportModal({ initialType, onClose, onSubmitLost, onSubmitFound, onSubmitAid, isOffline }) {
       const [type, setType] = useState(initialType);
@@ -1292,26 +1634,61 @@
       const [description, setDescription] = useState('');
       const [phone, setPhone] = useState('');
       const [location, setLocation] = useState('Sector Chapinero Central');
+      const [department, setDepartment] = useState('');
+      const [city, setCity] = useState('');
+      const [reference, setReference] = useState('');
+      const [photo, setPhoto] = useState('');
+      const [photoName, setPhotoName] = useState('');
 
       const handleSave = (e) => {
         e.preventDefault();
+
+        if ((type === 'lost' || type === 'found') && !photo) {
+          alert('Debes subir una fotografía de la mascota.');
+          return;
+        }
+
+        if ((type === 'lost' || type === 'found') && (!department || !city || !reference)) {
+          alert('Selecciona departamento, ciudad/municipio y dirección o referencia.');
+          return;
+        }
+
+        const center = CITY_CENTER[city] || [4.6540, -74.0570];
+
         const baseData = {
           id: (type === 'lost' ? 'L-' : type === 'found' ? 'F-' : 'A-') + Date.now(),
           species,
           breed: breed || 'Mestizo',
           color: color || 'No especificado',
           description,
-          latitude: 4.6540 + (Math.random() - 0.5) * 0.02,
-          longitude: -74.0570 + (Math.random() - 0.5) * 0.02,
+          latitude: center[0],
+          longitude: center[1],
           contactPhone: phone || '+57 300 000 0000',
-          photo: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=600&q=80',
+          photo: photo || 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=600&q=80',
           status: type === 'lost' ? 'PERDIDA' : 'EN RESGUARDO'
         };
 
         if (type === 'lost') {
-          onSubmitLost({ ...baseData, name: name || 'Sin Nombre', address: location, lostDate: 'Hace instantes', sightings: [] });
+          onSubmitLost({
+            ...baseData,
+            name: name || 'Sin Nombre',
+            address: `${reference}, ${city}, ${department}`,
+            department,
+            city,
+            reference,
+            lostDate: 'Hace instantes',
+            sightings: []
+          });
         } else if (type === 'found') {
-          onSubmitFound({ ...baseData, foundLocation: location, foundDate: 'Hace instantes' });
+          onSubmitFound({
+            ...baseData,
+            foundLocation: `${reference}, ${city}, ${department}`,
+            address: `${reference}, ${city}, ${department}`,
+            department,
+            city,
+            reference,
+            foundDate: 'Hace instantes'
+          });
         } else {
           onSubmitAid({
             id: 'A-' + Date.now(),
@@ -1377,10 +1754,84 @@
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">Ubicación / Barrio</label>
-                <input type="text" placeholder="Ej. Parque de Lourdes" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full p-2.5 border rounded-lg" required />
-              </div>
+              {(type === 'lost' || type === 'found') && (
+                <div className="border-2 border-dashed border-gray-300 bg-gray-50 rounded-xl p-3">
+                  <label className="block font-bold text-gray-700 mb-1">📸 Fotografía de la mascota *</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    required
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setPhotoName(file.name);
+                      const reader = new FileReader();
+                      reader.onload = () => setPhoto(reader.result);
+                      reader.readAsDataURL(file);
+                    }}
+                    className="w-full text-xs"
+                  />
+                  {photo && (
+                    <div className="mt-3">
+                      <img src={photo} alt="Vista previa de la mascota" className="w-full h-40 object-cover rounded-lg" />
+                      <p className="text-[10px] text-green-700 mt-1">✓ Foto cargada: {photoName}</p>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-gray-500 mt-1">Sube una foto clara para facilitar la identificación.</p>
+                </div>
+              )}
+
+              {(type === 'lost' || type === 'found') ? (
+                <div className="border border-teal-200 bg-teal-50 rounded-xl p-3 space-y-2">
+                  <label className="block font-bold text-gray-700 mb-1">📍 Ubicación / Barrio *</label>
+                  <p className="text-[10px] text-gray-600 mb-2">
+                    Selecciona primero el departamento, después la ciudad o municipio y finalmente una dirección o referencia.
+                    El mapa utiliza esta información para mejorar la precisión de la ubicación.
+                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <select
+                      value={department}
+                      onChange={(e) => { setDepartment(e.target.value); setCity(''); }}
+                      className="w-full p-2.5 border rounded-lg bg-white"
+                      required
+                    >
+                      <option value="">1. Departamento</option>
+                      {Object.keys(COLOMBIA_LOCATIONS).map(dep => <option key={dep}>{dep}</option>)}
+                    </select>
+
+                    <select
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="w-full p-2.5 border rounded-lg bg-white"
+                      disabled={!department}
+                      required
+                    >
+                      <option value="">2. Ciudad / Municipio</option>
+                      {(COLOMBIA_LOCATIONS[department] || []).map(c => <option key={c}>{c}</option>)}
+                    </select>
+
+                    <input
+                      type="text"
+                      placeholder="3. Dirección o referencia"
+                      value={reference}
+                      onChange={(e) => setReference(e.target.value)}
+                      className="w-full p-2.5 border rounded-lg bg-white"
+                      required
+                    />
+                  </div>
+
+                  <div className="bg-white border border-teal-100 rounded-lg p-2 text-[10px] text-gray-600">
+                    🗺️ <b>Ubicación en el mapa:</b> al publicar se utilizará el centro de la ciudad/municipio seleccionado.
+                    La dirección o referencia quedará asociada al reporte para facilitar la localización.
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Ubicación / Barrio</label>
+                  <input type="text" placeholder="Ej. Parque de Lourdes" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full p-2.5 border rounded-lg" required />
+                </div>
+              )}
 
               <div>
                 <label className="block font-bold text-gray-700 mb-1">Teléfono de Contacto</label>
