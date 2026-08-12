@@ -1,0 +1,1995 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Animalistas de Corazón - Respuesta y Rescate de Mascotas en Emergencias</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#00A39E', // Teal/Turquoise matching the logo outer ring
+              light: '#E6F7F7',
+              dark: '#006E6B',
+            },
+            heartPink: {
+              DEFAULT: '#E6007E', // Vibrant Magenta Pink from the logo heart
+              light: '#FCE7F3',
+              dark: '#BE185D',
+            },
+            emergency: '#F57C00',
+            alert: '#D32F2F',
+            info: '#1976D2',
+            surface: '#F8FAF9',
+            textMain: '#1F2937',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Leaflet CSS & JS for Interactive Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      background-color: #F8FAF9;
+      color: #263238;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    .leaflet-container {
+      width: 100%;
+      height: 100%;
+      border-radius: 0.75rem;
+      z-index: 10;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 3px;
+    }
+    .pulse-emergency {
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.02); }
+    }
+    
+    /* Custom SVG Logo Styling */
+    .brand-logo-shadow {
+      filter: drop-shadow(0px 2px 4px rgba(0, 163, 158, 0.25));
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- OFFICIAL BRAND LOGO SVG COMPONENT ---
+    function BrandLogo({ size = 44, className = "" }) {
+      return (
+        <svg 
+          width={size} 
+          height={size} 
+          viewBox="0 0 200 200" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+          className={`brand-logo-shadow transition-transform hover:scale-105 ${className}`}
+        >
+          {/* Outer Teal Outer Ring */}
+          <circle cx="100" cy="100" r="100" fill="#00A39E" />
+          
+          {/* Inner White Circle */}
+          <circle cx="100" cy="100" r="82" fill="#FFFFFF" />
+          
+          {/* Central Magenta Pink Heart */}
+          <path 
+            d="M 100 160 C 100 160 38 120 38 78 C 38 52 58 35 80 35 C 92 35 100 42 100 42 C 100 42 108 35 120 35 C 142 35 162 52 162 78 C 162 120 100 160 100 160 Z" 
+            fill="#E6007E" 
+          />
+          
+          {/* Paw Print in Central Heart */}
+          {/* Main Paw Pad */}
+          <path 
+            d="M 100 115 C 88 115 80 126 80 134 C 80 142 90 148 100 148 C 110 148 120 142 120 134 C 120 126 112 115 100 115 Z" 
+            fill="#111827" 
+          />
+          {/* Toe Pads */}
+          <ellipse cx="74" cy="108" rx="8" ry="11" transform="rotate(-25 74 108)" fill="#111827" />
+          <ellipse cx="91" cy="98" rx="7.5" ry="11" transform="rotate(-8 91 98)" fill="#111827" />
+          <ellipse cx="109" cy="98" rx="7.5" ry="11" transform="rotate(8 109 98)" fill="#111827" />
+          <ellipse cx="126" cy="108" rx="8" ry="11" transform="rotate(25 126 108)" fill="#111827" />
+
+          {/* Curved Text "Animalistas" along top arc */}
+          <path id="textArcTop" d="M 30,100 A 70,70 0 0,1 170,100" fill="none" />
+          <text fill="#111827" fontSize="21" fontWeight="900" fontFamily="sans-serif" letterSpacing="1.2">
+            <textPath href="#textArcTop" startOffset="50%" textAnchor="middle">
+              Animalistas
+            </textPath>
+          </text>
+
+          {/* Curved Text "DE CORAZÓN" along bottom arc */}
+          <path id="textArcBottom" d="M 170,102 A 70,70 0 0,1 30,102" fill="none" />
+          <text fill="#111827" fontSize="16" fontWeight="800" fontFamily="sans-serif" letterSpacing="3">
+            <textPath href="#textArcBottom" startOffset="50%" textAnchor="middle">
+              DE CORAZÓN
+            </textPath>
+          </text>
+        </svg>
+      );
+    }
+
+    // --- MOCK DATABASE SEED DATA ---
+    const INITIAL_LOST_PETS = [
+      {
+        id: 'L-101',
+        name: 'Max',
+        species: 'Perro',
+        breed: 'Mestizo / Labrador',
+        sex: 'Macho',
+        age: '3 años',
+        size: 'Mediano',
+        color: 'Dorado / Café claro',
+        distinctiveMarks: 'Mancha blanca en el pecho, cicatriz pequeña en la oreja izquierda',
+        description: 'Asustado durante el sismo. Salió corriendo hacia la zona del parque central.',
+        latitude: 4.6510,
+        longitude: -74.0580,
+        address: 'Zona Chapinero / Parque de Lourdes',
+        lostDate: '2026-08-12 08:30',
+        status: 'AVISTADA', // PERDIDA, AVISTADA, ENCONTRADA, REUNIDA
+        contactPhone: '+57 300 123 4567',
+        photo: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80',
+        userId: 'U-1',
+        sightings: [
+          {
+            id: 'S-1',
+            date: '2026-08-12 09:15',
+            location: 'Calle 63 con Cra 13',
+            description: 'Visto corriendo desorientado con collar rojo cerca a la estación de bus.',
+            photo: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=400&q=80'
+          }
+        ]
+      },
+      {
+        id: 'L-102',
+        name: 'Luna',
+        species: 'Gato',
+        breed: 'Siamesa',
+        sex: 'Hembra',
+        age: '2 años',
+        size: 'Pequeño',
+        color: 'Gris y crema',
+        distinctiveMarks: 'Ojos azules intensos, cola con la punta oscura.',
+        description: 'Se escapó por el balcón rasado durante la réplica.',
+        latitude: 4.6580,
+        longitude: -74.0530,
+        address: 'Barrio Antiguo Country',
+        lostDate: '2026-08-12 07:45',
+        status: 'PERDIDA',
+        contactPhone: '+57 311 987 6543',
+        photo: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80',
+        userId: 'U-2',
+        sightings: []
+      }
+    ];
+
+    const INITIAL_FOUND_PETS = [
+      {
+        id: 'F-201',
+        species: 'Perro',
+        breed: 'Golden Retriever Mix',
+        sex: 'Macho',
+        age: 'Aproximadamente 4 años',
+        size: 'Grande',
+        color: 'Dorado',
+        healthStatus: 'Ligeramente deshidratado, sin heridas visibles',
+        hasCollar: true,
+        collarDescription: 'Collar de tela azul sin placa',
+        description: 'Encontrado resguardado debajo de un vehículo tras el temblor.',
+        latitude: 4.6535,
+        longitude: -74.0560,
+        foundLocation: 'Parque Virrey',
+        currentShelter: 'Refugio Temporal VetPet Calle 85',
+        foundDate: '2026-08-12 09:00',
+        status: 'EN RESGUARDO', // ENCONTRADA, EN RESGUARDO, IDENTIFICADA, REUNIDA
+        contactPhone: '+57 320 555 0192',
+        photo: 'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=600&q=80',
+        userId: 'U-3'
+      }
+    ];
+
+    const INITIAL_AID_REQUESTS = [
+      {
+        id: 'A-301',
+        type: 'Alimento y Medicamentos',
+        item: 'Alimento seco para perros y gasas/antiséptico',
+        quantity: '50',
+        unit: 'Kg / Unidades',
+        priority: 'URGENTE', // URGENTE, ALTA, MEDIA, NORMAL
+        location: 'Centro de Acopio Temporal Salitre',
+        latitude: 4.6560,
+        longitude: -74.0620,
+        description: 'Atendiendo 18 animales rescatados de escombros ligeros. Necesitamos alimento urgente.',
+        contactName: 'Dra. María Elena (Veterinaria Voluntaria)',
+        contactPhone: '+57 315 444 3322',
+        status: 'PENDIENTE'
+      }
+    ];
+
+    const INITIAL_HELP_POINTS = [
+      {
+        id: 'HP-401',
+        name: 'Punto de Acopio & Atención Vet #1 - Teusaquillo',
+        address: 'Calle 34 #19-05',
+        latitude: 4.6480,
+        longitude: -74.0650,
+        phone: '+57 1 234 5678',
+        schedule: '24/7 Durante Emergencia',
+        acceptedDonations: 'Alimento, Agua, Medicamentos, Mantas, Guacales',
+        status: 'Activo' // Activo, Saturado, Cerrado
+      }
+    ];
+
+    // --- PERSISTENCIA LOCAL Y SINCRONIZACIÓN EN TIEMPO REAL ---
+    const STORAGE_KEYS = {
+      lost: 'animalistas_lost_pets_v1',
+      found: 'animalistas_found_pets_v1',
+      aid: 'animalistas_aid_requests_v1',
+      help: 'animalistas_help_points_v1'
+    };
+
+    function loadPersisted(key, fallback) {
+      try {
+        const saved = localStorage.getItem(key);
+        return saved ? JSON.parse(saved) : fallback;
+      } catch (error) {
+        console.warn('No fue posible cargar datos guardados:', error);
+        return fallback;
+      }
+    }
+
+    function persist(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (error) {
+        console.warn('No fue posible guardar datos:', error);
+      }
+    }
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      // Navigation state
+      const [activeTab, setActiveTab] = useState('home'); // home, lost, found, map, aid, profile, admin, tech
+      const [emergencyMode, setEmergencyMode] = useState(true); // Emergency mode enabled by default for context
+      const [isOffline, setIsOffline] = useState(false);
+      const [offlineQueue, setOfflineQueue] = useState([]);
+
+      // Data States
+      const [lostPets, setLostPets] = useState(() => loadPersisted(STORAGE_KEYS.lost, INITIAL_LOST_PETS));
+      const [foundPets, setFoundPets] = useState(() => loadPersisted(STORAGE_KEYS.found, INITIAL_FOUND_PETS));
+      const [aidRequests, setAidRequests] = useState(() => loadPersisted(STORAGE_KEYS.aid, INITIAL_AID_REQUESTS));
+      const [helpPoints, setHelpPoints] = useState(() => loadPersisted(STORAGE_KEYS.help, INITIAL_HELP_POINTS));
+
+      // Guarda automáticamente cada cambio para que los reportes no se pierdan al recargar.
+      useEffect(() => persist(STORAGE_KEYS.lost, lostPets), [lostPets]);
+      useEffect(() => persist(STORAGE_KEYS.found, foundPets), [foundPets]);
+      useEffect(() => persist(STORAGE_KEYS.aid, aidRequests), [aidRequests]);
+      useEffect(() => persist(STORAGE_KEYS.help, helpPoints), [helpPoints]);
+
+      // Sincroniza automáticamente los reportes abiertos en otras pestañas/ventanas.
+      useEffect(() => {
+        const syncFromStorage = (event) => {
+          try {
+            if (event.key === STORAGE_KEYS.lost && event.newValue) setLostPets(JSON.parse(event.newValue));
+            if (event.key === STORAGE_KEYS.found && event.newValue) setFoundPets(JSON.parse(event.newValue));
+            if (event.key === STORAGE_KEYS.aid && event.newValue) setAidRequests(JSON.parse(event.newValue));
+            if (event.key === STORAGE_KEYS.help && event.newValue) setHelpPoints(JSON.parse(event.newValue));
+          } catch (error) {
+            console.warn('No fue posible sincronizar los reportes:', error);
+          }
+        };
+        window.addEventListener('storage', syncFromStorage);
+        return () => window.removeEventListener('storage', syncFromStorage);
+      }, []);
+
+      // Selected items for modal/detail views
+      const [selectedPet, setSelectedPet] = useState(null);
+      const [showReportModal, setShowReportModal] = useState(false);
+      const [reportType, setReportType] = useState('lost'); // lost, found, aid
+
+      // Toast Notifications
+      const [toast, setToast] = useState(null);
+
+      const showToast = (message, type = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 4000);
+      };
+
+      // Handle offline simulation
+      const toggleOffline = () => {
+        setIsOffline(!isOffline);
+        if (isOffline && offlineQueue.length > 0) {
+          showToast(`Conexión restablecida. Sincronizando ${offlineQueue.length} reportes guardados...`, 'info');
+          setTimeout(() => {
+            setOfflineQueue([]);
+            showToast('¡Todos los datos han sido sincronizados correctamente!');
+          }, 2000);
+        }
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col pb-20 md:pb-0 font-sans">
+          {/* TOP EMERGENCY STATUS BANNER */}
+          <div className={`${emergencyMode ? 'bg-alert text-white' : 'bg-brand text-white'} px-4 py-2 text-sm flex items-center justify-between transition-colors shadow-md`}>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block w-3 h-3 bg-white rounded-full animate-ping"></span>
+              <span className="font-bold tracking-wide">
+                {emergencyMode ? '🚨 MODO EMERGENCIA ACTIVO: SISMO / TERREMOTOS' : '🛡️ SISTEMA EN MODO PREVENTIVO / NORMAL'}
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={toggleOffline}
+                className={`text-xs px-2 py-1 rounded font-semibold border ${isOffline ? 'bg-amber-500 border-amber-600 text-white' : 'bg-white/20 hover:bg-white/30 border-white/40'}`}
+              >
+                {isOffline ? '⚠️ Sin Conexión (Modo Offline)' : '🌐 Conectado'}
+              </button>
+              <button 
+                onClick={() => setEmergencyMode(!emergencyMode)}
+                className="underline text-xs hover:text-gray-200"
+              >
+                {emergencyMode ? 'Cambiar a Normal' : 'Simular Emergencia'}
+              </button>
+            </div>
+          </div>
+
+          {/* TOAST ALERTS */}
+          {toast && (
+            <div className={`fixed top-12 right-4 z-50 px-4 py-3 rounded-lg shadow-xl text-white font-medium flex items-center space-x-2 ${
+              toast.type === 'alert' ? 'bg-alert' : toast.type === 'info' ? 'bg-info' : 'bg-brand'
+            }`}>
+              <span>{toast.message}</span>
+            </div>
+          )}
+
+          {/* LIVE DATA STATUS */}
+          <div className="bg-white border-b border-gray-100 px-4 py-1.5 flex items-center justify-center gap-2 text-[11px] text-gray-500">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            <span><strong>Actualización automática:</strong> {lostPets.length + foundPets.length + aidRequests.length} reportes disponibles</span>
+          </div>
+
+          {/* HEADER BRANDING */}
+          <header className="bg-white border-b border-gray-200 sticky top-0 z-40 px-4 py-2.5 flex items-center justify-between shadow-sm">
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('home')}>
+              <BrandLogo size={46} />
+              <div>
+                <div className="flex items-center space-x-1">
+                  <h1 className="text-xl font-black text-brand tracking-tight leading-none">Animalistas</h1>
+                  <span className="text-xl font-black text-heartPink leading-none">de Corazón</span>
+                </div>
+                <p className="text-[11px] text-gray-500 font-medium mt-0.5">Rescate & Reunificación en Emergencias</p>
+              </div>
+            </div>
+
+            <div className="hidden md:flex items-center space-x-1">
+              <NavButton active={activeTab === 'home'} onClick={() => setActiveTab('home')} label="Inicio" icon="🏠" />
+              <NavButton active={activeTab === 'map'} onClick={() => setActiveTab('map')} label="Mapa Interactivo" icon="🗺️" />
+              <NavButton active={activeTab === 'lost'} onClick={() => setActiveTab('lost')} label="Perdidos" icon="🔴" />
+              <NavButton active={activeTab === 'found'} onClick={() => setActiveTab('found')} label="Encontrados" icon="🟢" />
+              <NavButton active={activeTab === 'aid'} onClick={() => setActiveTab('aid')} label="Centro Ayuda" icon="💖" />
+              <NavButton active={activeTab === 'match'} onClick={() => setActiveTab('match')} label="Smart Match" icon="⚡" />
+              <NavButton active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} label="Admin" icon="⚙️" />
+              <NavButton active={activeTab === 'tech'} onClick={() => setActiveTab('tech')} label="Arquitectura" icon="💻" />
+            </div>
+
+            <button 
+              onClick={() => { setReportType('lost'); setShowReportModal(true); }}
+              className="bg-heartPink hover:bg-heartPink-dark text-white font-bold px-3.5 py-2 rounded-xl text-sm shadow-md flex items-center space-x-1.5 transition transform hover:scale-105"
+            >
+              <span className="text-base">🐾</span>
+              <span>+ Publicar Reporte</span>
+            </button>
+          </header>
+
+          {/* MAIN CONTAINER CONTENT */}
+          <main className="flex-1 max-w-7xl w-full mx-auto p-4">
+
+            {/* TAB 1: HOME */}
+            {activeTab === 'home' && (
+              <HomeView 
+                emergencyMode={emergencyMode}
+                onOpenReport={(type) => { setReportType(type); setShowReportModal(true); }}
+                onGoToMap={() => setActiveTab('map')}
+                lostPets={lostPets}
+                foundPets={foundPets}
+                aidRequests={aidRequests}
+                onSelectPet={(pet) => setSelectedPet(pet)}
+                onGoToTech={() => setActiveTab('tech')}
+              />
+            )}
+
+            {/* TAB 2: INTERACTIVE MAP */}
+            {activeTab === 'map' && (
+              <MapView 
+                lostPets={lostPets}
+                foundPets={foundPets}
+                aidRequests={aidRequests}
+                helpPoints={helpPoints}
+                onSelectPet={(pet) => setSelectedPet(pet)}
+              />
+            )}
+
+            {/* TAB 3: LOST PETS */}
+            {activeTab === 'lost' && (
+              <PetListView 
+                type="lost"
+                pets={lostPets}
+                onSelectPet={(pet) => setSelectedPet(pet)}
+                onNewReport={() => { setReportType('lost'); setShowReportModal(true); }}
+              />
+            )}
+
+            {/* TAB 4: FOUND PETS */}
+            {activeTab === 'found' && (
+              <PetListView 
+                type="found"
+                pets={foundPets}
+                onSelectPet={(pet) => setSelectedPet(pet)}
+                onNewReport={() => { setReportType('found'); setShowReportModal(true); }}
+              />
+            )}
+
+            {/* TAB 5: AID CENTER */}
+            {activeTab === 'aid' && (
+              <AidCenterView 
+                aidRequests={aidRequests}
+                helpPoints={helpPoints}
+                onRequestAid={(request) => {
+                  if (request) {
+                    setAidRequests(prev => [{
+                      ...request,
+                      id: 'A-' + Date.now(),
+                      status: 'PENDIENTE'
+                    }, ...prev]);
+                    showToast('Solicitud de ayuda enviada correctamente.');
+                  } else {
+                    setReportType('aid');
+                    setShowReportModal(true);
+                  }
+                }}
+                onUpdateAidRequest={(request) => {
+                  setAidRequests(prev => prev.map(item => item.id === request.id ? request : item));
+                  showToast('Solicitud de ayuda actualizada correctamente.');
+                }}
+                onDeleteAidRequest={(id) => {
+                  setAidRequests(prev => prev.filter(item => item.id !== id));
+                  showToast('Solicitud de ayuda eliminada.');
+                }}
+                onPledgeDonation={(req) => showToast(`¡Gracias! Se ha notificado al responsable de la solicitud #${req.id}`, 'success')}
+                onAddHelpPoint={(point) => {
+                  setHelpPoints(prev => [{ ...point, id: 'HP-' + Date.now() }, ...prev]);
+                  showToast('Punto de acopio agregado correctamente.');
+                }}
+                onUpdateHelpPoint={(point) => {
+                  setHelpPoints(prev => prev.map(item => item.id === point.id ? point : item));
+                  showToast('Punto de acopio actualizado correctamente.');
+                }}
+                onDeleteHelpPoint={(id) => {
+                  setHelpPoints(prev => prev.filter(item => item.id !== id));
+                  showToast('Punto de acopio eliminado.');
+                }}
+              />
+            )}
+
+            {/* TAB 6: SMART MATCH MATCHING ENGINE */}
+            {activeTab === 'match' && (
+              <SmartMatchView 
+                lostPets={lostPets}
+                foundPets={foundPets}
+                onSelectPet={(pet) => setSelectedPet(pet)}
+              />
+            )}
+
+            {/* TAB 7: ADMIN DASHBOARD */}
+            {activeTab === 'admin' && (
+              <AdminDashboard 
+                emergencyMode={emergencyMode}
+                setEmergencyMode={setEmergencyMode}
+                lostPets={lostPets}
+                foundPets={foundPets}
+                aidRequests={aidRequests}
+              />
+            )}
+
+            {/* TAB 8: TECHNICAL ARCHITECTURE & DATABASE SCHEMA */}
+            {activeTab === 'tech' && (
+              <ArchitectureDocView />
+            )}
+
+          </main>
+
+          {/* PET DETAIL MODAL / SLIDE-OVER */}
+          {selectedPet && (
+            <PetDetailModal 
+              pet={selectedPet} 
+              onClose={() => setSelectedPet(null)}
+              onAddSighting={(newSighting) => {
+                const updated = lostPets.map(p => {
+                  if (p.id === selectedPet.id) {
+                    return { ...p, sightings: [...p.sightings, newSighting], status: 'AVISTADA' };
+                  }
+                  return p;
+                });
+                setLostPets(updated);
+                setSelectedPet({ ...selectedPet, sightings: [...selectedPet.sightings, newSighting], status: 'AVISTADA' });
+                showToast(' Avistamiento registrado y notificado al tutor.');
+              }}
+              showToast={showToast}
+            />
+          )}
+
+          {/* REPORT CREATION MODAL */}
+          {showReportModal && (
+            <CreateReportModal 
+              initialType={reportType}
+              onClose={() => setShowReportModal(false)}
+              isOffline={isOffline}
+              onSubmitLost={(data) => {
+                if (isOffline) {
+                  setOfflineQueue([...offlineQueue, { type: 'lost', data }]);
+                  showToast('Guardado localmente. Se enviará al reconectar internet.', 'info');
+                } else {
+                  setLostPets(prev => [data, ...prev]);
+                  showToast('¡Reporte de Mascota Perdida publicado exitosamente!');
+                }
+                setShowReportModal(false);
+              }}
+              onSubmitFound={(data) => {
+                if (isOffline) {
+                  setOfflineQueue([...offlineQueue, { type: 'found', data }]);
+                  showToast('Guardado localmente. Se enviará al reconectar internet.', 'info');
+                } else {
+                  setFoundPets(prev => [data, ...prev]);
+                  showToast('¡Reporte de Mascota Encontrada registrado!');
+                }
+                setShowReportModal(false);
+              }}
+              onSubmitAid={(data) => {
+                setAidRequests(prev => [data, ...prev]);
+                showToast('Solicitud de ayuda enviada a la comunidad.');
+                setShowReportModal(false);
+              }}
+            />
+          )}
+
+          {/* MOBILE NAVIGATION BOTTOM BAR */}
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 flex justify-around items-center py-2 px-1 shadow-lg">
+            <MobileNavTab active={activeTab === 'home'} onClick={() => setActiveTab('home')} icon="🏠" label="Inicio" />
+            <MobileNavTab active={activeTab === 'map'} onClick={() => setActiveTab('map')} icon="🗺️" label="Mapa" />
+            <MobileNavTab active={activeTab === 'lost'} onClick={() => setActiveTab('lost')} icon="🔴" label="Perdidos" />
+            <MobileNavTab active={activeTab === 'found'} onClick={() => setActiveTab('found')} icon="🟢" label="Encontrados" />
+            <MobileNavTab active={activeTab === 'aid'} onClick={() => setActiveTab('aid')} icon="❤️" label="Ayuda" />
+            <MobileNavTab active={activeTab === 'match'} onClick={() => setActiveTab('match')} icon="⚡" label="Coincidir" />
+          </nav>
+        </div>
+      );
+    }
+
+    // --- NAVIGATION HELPERS ---
+    function NavButton({ active, onClick, label, icon }) {
+      return (
+        <button
+          onClick={onClick}
+          className={`px-3 py-1.5 rounded-lg font-medium text-xs md:text-sm transition flex items-center space-x-1 ${
+            active ? 'bg-brand text-white shadow-sm' : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          <span>{icon}</span>
+          <span>{label}</span>
+        </button>
+      );
+    }
+
+    function MobileNavTab({ active, onClick, icon, label }) {
+      return (
+        <button
+          onClick={onClick}
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg ${
+            active ? 'text-brand font-bold' : 'text-gray-500 font-normal'
+          }`}
+        >
+          <span className="text-lg leading-tight">{icon}</span>
+          <span className="text-[10px] mt-0.5">{label}</span>
+        </button>
+      );
+    }
+
+    // --- HOME VIEW COMPONENT ---
+    function HomeView({ emergencyMode, onOpenReport, onGoToMap, lostPets, foundPets, aidRequests, onSelectPet, onGoToTech }) {
+      return (
+        <div className="space-y-6">
+          {/* EMERGENCY HERO BANNER - ADAPTED TO TEAL & MAGENTA BRAND PALETTE */}
+          <div className="bg-gradient-to-br from-brand-dark via-brand to-teal-900 text-white rounded-2xl p-6 shadow-xl relative overflow-hidden border-2 border-brand/20">
+            {/* Background Decorative Heart Motif */}
+            <div className="absolute -right-8 -bottom-10 opacity-10 pointer-events-none text-heartPink">
+              <svg width="280" height="280" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            </div>
+
+            <div className="max-w-3xl relative z-10 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center space-x-1 bg-heartPink text-white font-bold text-xs px-3 py-1 rounded-full uppercase tracking-wider shadow">
+                  <span>💖</span>
+                  <span>{emergencyMode ? 'Respuesta Activa de Terremoto / Sismo' : 'Red Comunitaria de Protección Animal'}</span>
+                </span>
+              </div>
+              
+              <h2 className="text-2xl md:text-4xl font-extrabold leading-tight">
+                En una emergencia, <span className="text-heartPink-light underline decoration-heartPink underline-offset-4">cada animal cuenta.</span>
+              </h2>
+              <p className="text-teal-50 text-sm md:text-base max-w-2xl">
+                Plataforma comunitaria de rescate georreferenciado, aviso de avistamientos y suministro de auxilio veterinario en tiempo real.
+              </p>
+
+              {/* THREE MAIN ACTION CARDS */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-4">
+                <button 
+                  onClick={() => onOpenReport('lost')}
+                  className="bg-alert hover:bg-red-700 text-white p-4 rounded-xl font-bold flex flex-col items-center text-center shadow-lg transition transform hover:-translate-y-1 border border-red-400/30"
+                >
+                  <span className="text-3xl mb-1">🐾</span>
+                  <span className="text-base">Mascota Perdida</span>
+                  <span className="text-xs font-normal text-red-100 opacity-90 mt-1">Reportar animal que estás buscando</span>
+                </button>
+
+                <button 
+                  onClick={() => onOpenReport('found')}
+                  className="bg-brand hover:bg-brand-dark text-white p-4 rounded-xl font-bold flex flex-col items-center text-center shadow-lg transition transform hover:-translate-y-1 border border-teal-300/30"
+                >
+                  <span className="text-3xl mb-1">🐶</span>
+                  <span className="text-base">Mascota Encontrada</span>
+                  <span className="text-xs font-normal text-teal-100 opacity-90 mt-1">Reportar animal hallado o rescatado</span>
+                </button>
+
+                <button 
+                  onClick={() => onOpenReport('aid')}
+                  className="bg-heartPink hover:bg-heartPink-dark text-white p-4 rounded-xl font-bold flex flex-col items-center text-center shadow-lg transition transform hover:-translate-y-1 border border-pink-300/30"
+                >
+                  <span className="text-3xl mb-1">💖</span>
+                  <span className="text-base">Ayuda</span>
+                  <span className="text-xs font-normal text-pink-100 opacity-90 mt-1">Pedir u ofrecer comida/medicinas</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* QUICK LINKS & METRICS BAR */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 text-alert flex items-center justify-center font-bold text-lg">🔴</div>
+              <div>
+                <div className="text-2xl font-black text-gray-800">{lostPets.length}</div>
+                <div className="text-xs text-gray-500 font-medium">Búsquedas Activas</div>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full bg-teal-100 text-brand flex items-center justify-center font-bold text-lg">🟢</div>
+              <div>
+                <div className="text-2xl font-black text-gray-800">{foundPets.length}</div>
+                <div className="text-xs text-gray-500 font-medium">Mascotas Rescatadas</div>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full bg-pink-100 text-heartPink flex items-center justify-center font-bold text-lg">💖</div>
+              <div>
+                <div className="text-2xl font-black text-gray-800">{aidRequests.length}</div>
+                <div className="text-xs text-gray-500 font-medium">Solicitudes Auxilio</div>
+              </div>
+            </div>
+            <div 
+              onClick={onGoToMap}
+              className="bg-white hover:bg-teal-50 p-4 rounded-xl shadow-sm border border-brand/30 flex items-center justify-between cursor-pointer transition"
+            >
+              <div>
+                <div className="text-sm font-bold text-brand">Ver Mapa Vivo</div>
+                <div className="text-xs text-gray-500">Explorar por cercanía</div>
+              </div>
+              <span className="text-2xl">🗺️</span>
+            </div>
+          </div>
+
+          {/* EMERGENCY GUIDE SECTION */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start space-x-3">
+              <span className="text-2xl">⚡</span>
+              <div>
+                <h4 className="font-bold text-amber-900 text-sm md:text-base">¿Qué hacer con tus animales tras un terremoto?</h4>
+                <p className="text-xs md:text-sm text-amber-800">1. Mantén la calma. 2. Revisa lesiones sin mover bruscamente. 3. Ponles correa/identificación de inmediato. 4. Publica en la app si se extravió.</p>
+              </div>
+            </div>
+            <button 
+              onClick={onGoToTech}
+              className="bg-amber-800 hover:bg-amber-900 text-white text-xs px-3 py-2 rounded-lg font-medium whitespace-nowrap"
+            >
+              📘 Arquitectura & Doc Técnica
+            </button>
+          </div>
+
+          {/* RECENT LOST & FOUND CASES FEED */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-lg text-gray-800 flex items-center space-x-2">
+                <span>⚡ Casos Recientes Registrados</span>
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Combine and render latest pets */}
+              {lostPets.concat(foundPets).slice(0, 3).map((item) => (
+                <PetCard key={item.id} pet={item} onSelect={() => onSelectPet(item)} />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- REUSABLE PET CARD COMPONENT ---
+    function PetCard({ pet, onSelect }) {
+      const isLost = pet.id.startsWith('L');
+
+      return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition flex flex-col">
+          <div className="relative h-48 bg-gray-100">
+            <img src={pet.photo} alt={pet.name || 'Mascota'} className="w-full h-full object-cover" />
+            <span className={`absolute top-2 left-2 px-2.5 py-1 rounded-full text-xs font-bold text-white shadow ${
+              isLost ? 'bg-alert' : 'bg-brand'
+            }`}>
+              {isLost ? '🔴 PERDIDA' : '🟢 ENCONTRADA'}
+            </span>
+            <span className="absolute bottom-2 right-2 bg-black/60 text-white text-[11px] px-2 py-0.5 rounded backdrop-blur-sm">
+              📍 {pet.address || pet.foundLocation}
+            </span>
+          </div>
+
+          <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex justify-between items-start">
+                <h4 className="font-bold text-gray-800 text-lg">
+                  {pet.name ? pet.name : `${pet.species} (${pet.breed})`}
+                </h4>
+                <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 font-semibold">
+                  {pet.status}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1 line-clamp-2">{pet.description}</p>
+            </div>
+
+            <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-[11px] text-gray-400 font-medium">
+                ⏱️ {pet.lostDate || pet.foundDate}
+              </span>
+              <button 
+                onClick={onSelect}
+                className="text-xs font-bold text-brand hover:text-brand-dark flex items-center space-x-1"
+              >
+                <span>Ver Caso</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- LEAFLET MAP VIEW COMPONENT ---
+    function MapView({ lostPets, foundPets, aidRequests, helpPoints, onSelectPet }) {
+      const mapRef = useRef(null);
+      const leafletInstance = useRef(null);
+      const [filter, setFilter] = useState('ALL');
+
+      useEffect(() => {
+        if (!mapRef.current) return;
+
+        if (!leafletInstance.current) {
+          const map = L.map(mapRef.current).setView([4.6540, -74.0570], 14);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(map);
+          leafletInstance.current = map;
+        }
+
+        const map = leafletInstance.current;
+
+        map.eachLayer((layer) => {
+          if (layer instanceof L.Marker) {
+            map.removeLayer(layer);
+          }
+        });
+
+        // Add Lost Pets Markers (RED)
+        if (filter === 'ALL' || filter === 'LOST') {
+          lostPets.forEach(p => {
+            const marker = L.marker([p.latitude, p.longitude], {
+              icon: L.divIcon({
+                className: 'custom-pin',
+                html: `<div style="background-color:#D32F2F; color:white; font-size:16px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.3)">🐾</div>`
+              })
+            }).addTo(map);
+            marker.bindPopup(`
+              <div style="width:180px;">
+                <b style="color:#D32F2F;">🔴 PERDIDO: ${p.name || 'Sin Nombre'}</b><br/>
+                <small>${p.breed}</small><br/>
+                <p style="font-size:11px; margin:4px 0;">${p.address}</p>
+              </div>
+            `);
+          });
+        }
+
+        // Add Found Pets Markers (TEAL BRAND)
+        if (filter === 'ALL' || filter === 'FOUND') {
+          foundPets.forEach(p => {
+            const marker = L.marker([p.latitude, p.longitude], {
+              icon: L.divIcon({
+                className: 'custom-pin',
+                html: `<div style="background-color:#00A39E; color:white; font-size:16px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.3)">🐶</div>`
+              })
+            }).addTo(map);
+            marker.bindPopup(`
+              <div style="width:180px;">
+                <b style="color:#00A39E;">🟢 RESCATADO / HALLADO</b><br/>
+                <small>${p.species} - ${p.breed}</small><br/>
+                <p style="font-size:11px; margin:4px 0;">Ubicación: ${p.foundLocation}</p>
+              </div>
+            `);
+          });
+        }
+
+        // Add Aid Requests (MAGENTA PINK)
+        if (filter === 'ALL' || filter === 'AID') {
+          aidRequests.forEach(a => {
+            const marker = L.marker([a.latitude, a.longitude], {
+              icon: L.divIcon({
+                className: 'custom-pin',
+                html: `<div style="background-color:#E6007E; color:white; font-size:16px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.3)">💖</div>`
+              })
+            }).addTo(map);
+            marker.bindPopup(`
+              <div style="width:180px;">
+                <b style="color:#E6007E;">💖 AYUDA REQUERIDA</b><br/>
+                <small>${a.item}</small><br/>
+                <p style="font-size:11px; margin:4px 0;">Prioridad: ${a.priority}</p>
+              </div>
+            `);
+          });
+        }
+
+        // Add Help Points (BLUE)
+        if (filter === 'ALL' || filter === 'POINTS') {
+          helpPoints.forEach(hp => {
+            const marker = L.marker([hp.latitude, hp.longitude], {
+              icon: L.divIcon({
+                className: 'custom-pin',
+                html: `<div style="background-color:#1976D2; color:white; font-size:16px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.3)">🏥</div>`
+              })
+            }).addTo(map);
+            marker.bindPopup(`
+              <div style="width:180px;">
+                <b style="color:#1976D2;">🔵 PUNTO DE ACOPIO</b><br/>
+                <small>${hp.name}</small><br/>
+                <p style="font-size:11px; margin:4px 0;">Horario: ${hp.schedule}</p>
+              </div>
+            `);
+          });
+        }
+
+      }, [filter, lostPets, foundPets, aidRequests, helpPoints]);
+
+      return (
+        <div className="space-y-4 h-[calc(100vh-140px)] flex flex-col">
+          {/* MAP FILTERS */}
+          <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-2">
+            <span className="font-bold text-xs text-gray-600 uppercase tracking-wider">Filtros de Mapa:</span>
+            <div className="flex flex-wrap gap-1.5 text-xs">
+              <button onClick={() => setFilter('ALL')} className={`px-3 py-1 rounded-lg font-medium ${filter === 'ALL' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700'}`}>Todos</button>
+              <button onClick={() => setFilter('LOST')} className={`px-3 py-1 rounded-lg font-medium ${filter === 'LOST' ? 'bg-alert text-white' : 'bg-red-50 text-alert'}`}>🔴 Perdidos</button>
+              <button onClick={() => setFilter('FOUND')} className={`px-3 py-1 rounded-lg font-medium ${filter === 'FOUND' ? 'bg-brand text-white' : 'bg-teal-50 text-brand'}`}>🟢 Encontrados</button>
+              <button onClick={() => setFilter('AID')} className={`px-3 py-1 rounded-lg font-medium ${filter === 'AID' ? 'bg-heartPink text-white' : 'bg-pink-50 text-heartPink'}`}>💖 Necesitan Ayuda</button>
+              <button onClick={() => setFilter('POINTS')} className={`px-3 py-1 rounded-lg font-medium ${filter === 'POINTS' ? 'bg-info text-white' : 'bg-blue-50 text-info'}`}>🔵 Puntos Acopio</button>
+            </div>
+          </div>
+
+          {/* MAP CANVAS */}
+          <div className="flex-1 relative rounded-xl overflow-hidden shadow-inner border border-gray-200">
+            <div ref={mapRef} />
+          </div>
+        </div>
+      );
+    }
+
+    // --- PET LIST VIEW (LOST/FOUND) ---
+    function PetListView({ type, pets, onSelectPet, onNewReport }) {
+      const isLost = type === 'lost';
+      const [speciesFilter, setSpeciesFilter] = useState('ALL');
+
+      const filteredPets = pets.filter(p => speciesFilter === 'ALL' || p.species === speciesFilter);
+
+      return (
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 flex items-center space-x-2">
+                <span>{isLost ? '🔴 Reportes de Mascotas Perdidas' : '🟢 Mascotas Encontradas / Rescatadas'}</span>
+              </h2>
+              <p className="text-xs text-gray-500">
+                {isLost ? 'Animales extraviados que su familia busca desesperadamente.' : 'Animales resguardados o vistos esperando reunión.'}
+              </p>
+            </div>
+            
+            <button 
+              onClick={onNewReport}
+              className={`px-4 py-2 rounded-lg text-white font-bold text-sm shadow transition ${
+                isLost ? 'bg-alert hover:bg-red-700' : 'bg-brand hover:bg-emerald-700'
+              }`}
+            >
+              + {isLost ? 'Reportar Extravío' : 'Registrar Rescatado'}
+            </button>
+          </div>
+
+          {/* SPECIES FILTER */}
+          <div className="flex space-x-2 text-xs font-semibold overflow-x-auto pb-1">
+            {['ALL', 'Perro', 'Gato', 'Ave', 'Conejo', 'Otro'].map(s => (
+              <button 
+                key={s}
+                onClick={() => setSpeciesFilter(s)}
+                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition ${
+                  speciesFilter === s ? 'bg-brand text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+              >
+                {s === 'ALL' ? '🐾 Todos los animales' : s}
+              </button>
+            ))}
+          </div>
+
+          {/* CARDS GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {filteredPets.map(pet => (
+              <PetCard key={pet.id} pet={pet} onSelect={() => onSelectPet(pet)} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // --- AID CENTER & DONATION VIEW ---
+    function AidCenterView({ aidRequests, helpPoints, onRequestAid, onPledgeDonation, onAddHelpPoint, onUpdateHelpPoint, onDeleteHelpPoint, onUpdateAidRequest, onDeleteAidRequest }) {
+      const [subTab, setSubTab] = useState('requests');
+      const [showPointForm, setShowPointForm] = useState(false);
+      const [editingPoint, setEditingPoint] = useState(null);
+      const [editingAid, setEditingAid] = useState(null);
+
+      const openNewPoint = () => { setEditingPoint(null); setShowPointForm(true); };
+      const openEditPoint = (point) => { setEditingPoint(point); setShowPointForm(true); };
+      const handleDeletePoint = (point) => {
+        if (window.confirm(`¿Deseas eliminar el punto de acopio "${point.name}"?`)) onDeleteHelpPoint(point.id);
+      };
+
+      return (
+        <div className="space-y-5">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-gray-100">
+              <h2 className="text-xl font-extrabold text-gray-800 flex items-center space-x-2"><span>💖 Ayuda</span></h2>
+              <p className="text-xs text-gray-500 mt-1">Solicita ayuda para una mascota, consulta solicitudes y encuentra puntos de acopio.</p>
+            </div>
+            <div className="p-3 bg-gray-50 flex flex-wrap gap-2">
+              <button onClick={() => setSubTab('requests')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${subTab === 'requests' ? 'bg-heartPink text-white' : 'bg-white text-gray-700 border border-gray-200'}`}>Solicitudes de Ayuda</button>
+              <button onClick={() => setSubTab('points')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${subTab === 'points' ? 'bg-info text-white' : 'bg-white text-gray-700 border border-gray-200'}`}>Puntos de Acopio</button>
+              {subTab === 'points' && <button onClick={openNewPoint} className="bg-brand text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Agregar Punto</button>}
+              <button onClick={() => onRequestAid()} className="bg-brand text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">+ Pedir Ayuda</button>
+            </div>
+          </div>
+
+          {subTab === 'requests' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {aidRequests.map(req => (
+                <div key={req.id} className="bg-white p-4 rounded-xl shadow-sm border border-pink-100 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-black uppercase text-white ${req.priority === 'URGENTE' ? 'bg-alert animate-pulse' : 'bg-heartPink'}`}>Prioridad: {req.priority}</span>
+                      <h3 className="font-bold text-gray-800 text-base mt-1">{req.item}</h3>
+                      <p className="text-xs text-gray-500">Cantidad requerida: <b>{req.quantity} {req.unit}</b></p>
+                    </div>
+                    <span className="text-xs text-gray-400">#{req.id}</span>
+                  </div>
+                  <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded">{req.description}</p>
+                  <div className="text-xs text-gray-500 space-y-1 pt-2 border-t border-gray-100">
+                    <div>🐾 Especie: <b>{req.species || 'No especificada'}</b></div>
+                    <div>📍 {req.location}</div>
+                    <div>📞 {req.contactPhone || 'Sin teléfono'}</div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => onPledgeDonation(req)} className="flex-1 min-w-[160px] bg-brand hover:bg-brand-dark text-white font-bold py-2 rounded-lg text-xs shadow transition">🤝 Quiero Ayudar</button>
+                    <button onClick={() => setEditingAid(req)} className="bg-gray-700 text-white px-3 py-2 rounded-lg text-xs font-bold">✏️ Modificar</button>
+                    <button onClick={() => {
+                      if (window.confirm(`¿Deseas eliminar la solicitud ${req.id}?`)) onDeleteAidRequest(req.id);
+                    }} className="bg-alert text-white px-3 py-2 rounded-lg text-xs font-bold">🗑️ Eliminar</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div><h3 className="font-black text-gray-800">📍 Puntos de Acopio</h3><p className="text-xs text-gray-600">Consulta, agrega, modifica o elimina puntos de acopio disponibles para ayudar a los animales.</p></div>
+                <button onClick={openNewPoint} className="bg-brand text-white px-4 py-2 rounded-lg text-xs font-black shadow">+ Nuevo punto de acopio</button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {helpPoints.map(hp => (
+                  <div key={hp.id} className="bg-white p-4 rounded-xl shadow-sm border border-blue-100 space-y-2">
+                    <div className="flex justify-between items-start gap-2">
+                      <div><h3 className="font-bold text-brand text-base">{hp.name}</h3><span className="inline-block mt-1 text-xs px-2 py-0.5 rounded bg-teal-100 text-brand-dark font-bold">{hp.status}</span></div>
+                      <span className="text-[10px] text-gray-400">#{hp.id}</span>
+                    </div>
+                    <p className="text-xs text-gray-600">📍 Dirección: {hp.address}</p>
+                    <p className="text-xs text-gray-600">⏰ Horario de Atención: {hp.schedule}</p>
+                    <p className="text-xs text-gray-600">📦 Donaciones Aceptadas: {hp.acceptedDonations}</p>
+                    <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-2">
+                      <a href={`tel:${hp.phone}`} className="bg-info text-white px-3 py-1.5 rounded text-xs font-bold">📞 Llamar</a>
+                      <button onClick={() => openEditPoint(hp)} className="bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-bold">✏️ Modificar</button>
+                      <button onClick={() => handleDeletePoint(hp)} className="bg-alert text-white px-3 py-1.5 rounded text-xs font-bold">🗑️ Eliminar</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {helpPoints.length === 0 && <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500 text-sm">No hay puntos de acopio registrados.</div>}
+            </div>
+          )}
+
+          {editingAid && (
+            <AidRequestEditModal
+              request={editingAid}
+              onClose={() => setEditingAid(null)}
+              onSave={(request) => {
+                onUpdateAidRequest(request);
+                setEditingAid(null);
+              }}
+            />
+          )}
+
+          {showPointForm && (
+            <HelpPointModal
+              point={editingPoint}
+              onClose={() => { setShowPointForm(false); setEditingPoint(null); }}
+              onSave={(point) => {
+                if (editingPoint) onUpdateHelpPoint(point); else onAddHelpPoint(point);
+                setShowPointForm(false); setEditingPoint(null);
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    function AidRequestModal({ onClose, onSubmit }) {
+      const [species, setSpecies] = useState('Perro');
+      const [helpType, setHelpType] = useState('Alimento');
+      const [foodType, setFoodType] = useState('Concentrado');
+      const [medication, setMedication] = useState('');
+      const [quantity, setQuantity] = useState('');
+      const [phone, setPhone] = useState('');
+      const [description, setDescription] = useState('');
+      const [location, setLocation] = useState('');
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+
+        if (!phone.trim() || !description.trim() || !location.trim()) {
+          alert('Indica un número de contacto, una descripción de la emergencia y la ubicación.');
+          return;
+        }
+
+        const item = helpType === 'Alimento'
+          ? `Alimento para ${species.toLowerCase()} — ${foodType}`
+          : `Medicamento para ${species.toLowerCase()}${medication.trim() ? ` — ${medication.trim()}` : ''}`;
+
+        onSubmit({
+          item,
+          species,
+          helpType,
+          foodType: helpType === 'Alimento' ? foodType : '',
+          medication: helpType === 'Medicamentos' ? medication : '',
+          quantity: quantity || 'Por determinar',
+          unit: helpType === 'Alimento' ? 'ración/paquete' : 'unidad',
+          priority: 'URGENTE',
+          location: location.trim(),
+          description: description.trim(),
+          contactName: 'Persona solicitante',
+          contactPhone: phone.trim()
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-black text-gray-800">🚨 Solicitar Ayuda para una Mascota</h2>
+                <p className="text-xs text-gray-500">Solicita alimento, medicamentos o atención ante una emergencia.</p>
+              </div>
+              <button onClick={onClose} className="w-9 h-9 rounded-lg bg-gray-100 text-xl font-bold">×</button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-black mb-1">Especie *</label>
+                  <select value={species} onChange={e => setSpecies(e.target.value)} className="w-full p-2.5 border rounded-lg">
+                    <option>Perro</option>
+                    <option>Gato</option>
+                    <option>Ave</option>
+                    <option>Conejo</option>
+                    <option>Otro</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black mb-1">¿Qué necesitas? *</label>
+                  <select value={helpType} onChange={e => setHelpType(e.target.value)} className="w-full p-2.5 border rounded-lg">
+                    <option>Alimento</option>
+                    <option>Medicamentos</option>
+                  </select>
+                </div>
+              </div>
+
+              {helpType === 'Alimento' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-black mb-1">Tipo de alimento *</label>
+                    <select value={foodType} onChange={e => setFoodType(e.target.value)} className="w-full p-2.5 border rounded-lg">
+                      <option>Concentrado</option>
+                      <option>Alimento húmedo</option>
+                      <option>Leche maternizada</option>
+                      <option>Alimento para cachorro</option>
+                      <option>Alimento para adulto</option>
+                      <option>Otro</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black mb-1">Cantidad aproximada</label>
+                    <input value={quantity} onChange={e => setQuantity(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="Ej. 5 kg" />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-black mb-1">Medicamento que necesita</label>
+                  <input value={medication} onChange={e => setMedication(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="Nombre del medicamento o insumo veterinario" />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-black mb-1">📞 Número para contactar *</label>
+                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="+57 300 123 4567" required />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black mb-1">📍 Ubicación *</label>
+                <input value={location} onChange={e => setLocation(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="Barrio, dirección o punto de referencia" required />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black mb-1">🚨 Descripción de la emergencia *</label>
+                <textarea value={description} onChange={e => setDescription(e.target.value)} className="w-full p-2.5 border rounded-lg min-h-[110px]" placeholder="Describe qué ocurrió, cuántos animales necesitan ayuda, estado de la mascota y cualquier información importante..." required />
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                ⚠️ Si se trata de una emergencia veterinaria crítica, esta solicitud sirve para coordinar ayuda comunitaria y no sustituye la atención profesional inmediata.
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg font-bold">Cancelar</button>
+                <button type="submit" className="px-5 py-2 bg-alert text-white rounded-lg font-black">🚨 Enviar solicitud</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    function AidRequestEditModal({ request, onClose, onSave }) {
+      const [species, setSpecies] = useState(request.species || 'Perro');
+      const [helpType, setHelpType] = useState(request.helpType || (request.item?.toLowerCase().includes('medicamento') ? 'Medicamentos' : 'Alimento'));
+      const [foodType, setFoodType] = useState(request.foodType || 'Concentrado');
+      const [medication, setMedication] = useState(request.medication || '');
+      const [quantity, setQuantity] = useState(request.quantity || '');
+      const [phone, setPhone] = useState(request.contactPhone || '');
+      const [description, setDescription] = useState(request.description || '');
+      const [location, setLocation] = useState(request.location || '');
+      const [priority, setPriority] = useState(request.priority || 'URGENTE');
+
+      const submit = (e) => {
+        e.preventDefault();
+        if (!phone.trim() || !description.trim() || !location.trim()) {
+          alert('Completa teléfono, ubicación y descripción.');
+          return;
+        }
+
+        const item = helpType === 'Alimento'
+          ? `Alimento para ${species.toLowerCase()} — ${foodType}`
+          : `Medicamento para ${species.toLowerCase()}${medication.trim() ? ` — ${medication.trim()}` : ''}`;
+
+        onSave({
+          ...request,
+          item,
+          species,
+          helpType,
+          foodType: helpType === 'Alimento' ? foodType : '',
+          medication: helpType === 'Medicamentos' ? medication : '',
+          quantity: quantity || 'Por determinar',
+          unit: helpType === 'Alimento' ? 'ración/paquete' : 'unidad',
+          priority,
+          location: location.trim(),
+          description: description.trim(),
+          contactPhone: phone.trim()
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 z-[120] bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl">
+            <div className="p-4 border-b flex justify-between items-center">
+              <div><h2 className="text-xl font-black text-gray-800">✏️ Modificar solicitud de ayuda</h2><p className="text-xs text-gray-500">Actualiza la información de la emergencia.</p></div>
+              <button onClick={onClose} className="w-9 h-9 rounded-lg bg-gray-100 text-xl font-bold">×</button>
+            </div>
+            <form onSubmit={submit} className="p-5 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><label className="block text-xs font-black mb-1">Especie *</label><select value={species} onChange={e => setSpecies(e.target.value)} className="w-full p-2.5 border rounded-lg"><option>Perro</option><option>Gato</option><option>Ave</option><option>Conejo</option><option>Otro</option></select></div>
+                <div><label className="block text-xs font-black mb-1">Necesidad *</label><select value={helpType} onChange={e => setHelpType(e.target.value)} className="w-full p-2.5 border rounded-lg"><option>Alimento</option><option>Medicamentos</option></select></div>
+              </div>
+              {helpType === 'Alimento' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div><label className="block text-xs font-black mb-1">Tipo de alimento</label><select value={foodType} onChange={e => setFoodType(e.target.value)} className="w-full p-2.5 border rounded-lg"><option>Concentrado</option><option>Alimento húmedo</option><option>Leche maternizada</option><option>Alimento para cachorro</option><option>Alimento para adulto</option><option>Otro</option></select></div>
+                  <div><label className="block text-xs font-black mb-1">Cantidad</label><input value={quantity} onChange={e => setQuantity(e.target.value)} className="w-full p-2.5 border rounded-lg" /></div>
+                </div>
+              ) : (
+                <div><label className="block text-xs font-black mb-1">Medicamento</label><input value={medication} onChange={e => setMedication(e.target.value)} className="w-full p-2.5 border rounded-lg" /></div>
+              )}
+              <div><label className="block text-xs font-black mb-1">📞 Número de contacto *</label><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full p-2.5 border rounded-lg" required /></div>
+              <div><label className="block text-xs font-black mb-1">📍 Ubicación *</label><input value={location} onChange={e => setLocation(e.target.value)} className="w-full p-2.5 border rounded-lg" required /></div>
+              <div><label className="block text-xs font-black mb-1">🚨 Descripción *</label><textarea value={description} onChange={e => setDescription(e.target.value)} className="w-full p-2.5 border rounded-lg min-h-[110px]" required /></div>
+              <div><label className="block text-xs font-black mb-1">Prioridad</label><select value={priority} onChange={e => setPriority(e.target.value)} className="w-full p-2.5 border rounded-lg"><option>URGENTE</option><option>ALTA</option><option>MEDIA</option></select></div>
+              <div className="flex justify-end gap-2 pt-2 border-t"><button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg font-bold">Cancelar</button><button type="submit" className="px-5 py-2 bg-brand text-white rounded-lg font-black">Guardar cambios</button></div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    function HelpPointModal({ point, onClose, onSave }) {
+      const [name, setName] = useState(point?.name || '');
+      const [address, setAddress] = useState(point?.address || '');
+      const [phone, setPhone] = useState(point?.phone || '');
+      const [schedule, setSchedule] = useState(point?.schedule || '');
+      const [acceptedDonations, setAcceptedDonations] = useState(point?.acceptedDonations || '');
+      const [status, setStatus] = useState(point?.status || 'Activo');
+      const [latitude, setLatitude] = useState(point?.latitude ?? 4.711);
+      const [longitude, setLongitude] = useState(point?.longitude ?? -74.072);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!name.trim() || !address.trim() || !phone.trim() || !schedule.trim() || !acceptedDonations.trim()) {
+          alert('Completa todos los campos del punto de acopio.');
+          return;
+        }
+        onSave({
+          ...(point || {}),
+          name: name.trim(), address: address.trim(), phone: phone.trim(),
+          schedule: schedule.trim(), acceptedDonations: acceptedDonations.trim(),
+          status, latitude: Number(latitude), longitude: Number(longitude)
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div><h2 className="text-xl font-black text-gray-800">{point ? '✏️ Modificar Punto de Acopio' : '📍 Agregar Punto de Acopio'}</h2><p className="text-xs text-gray-500">La información se guardará y aparecerá en el mapa.</p></div>
+              <button onClick={onClose} className="w-9 h-9 rounded-lg bg-gray-100 text-xl font-bold">×</button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2"><label className="block text-xs font-black mb-1">Nombre del punto *</label><input value={name} onChange={e => setName(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="Ej. Punto de Acopio Animalistas" required /></div>
+              <div className="md:col-span-2"><label className="block text-xs font-black mb-1">Dirección *</label><input value={address} onChange={e => setAddress(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="Ej. Calle 34 #19-05" required /></div>
+              <div><label className="block text-xs font-black mb-1">Teléfono *</label><input value={phone} onChange={e => setPhone(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="+57 300 123 4567" required /></div>
+              <div><label className="block text-xs font-black mb-1">Horario *</label><input value={schedule} onChange={e => setSchedule(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="24/7 Durante Emergencia" required /></div>
+              <div className="md:col-span-2"><label className="block text-xs font-black mb-1">Donaciones aceptadas *</label><input value={acceptedDonations} onChange={e => setAcceptedDonations(e.target.value)} className="w-full p-2.5 border rounded-lg" placeholder="Alimento, Agua, Medicamentos, Mantas..." required /></div>
+              <div><label className="block text-xs font-black mb-1">Estado *</label><select value={status} onChange={e => setStatus(e.target.value)} className="w-full p-2.5 border rounded-lg"><option>Activo</option><option>Saturado</option><option>Cerrado</option></select></div>
+              <div><label className="block text-xs font-black mb-1">Latitud</label><input type="number" step="any" value={latitude} onChange={e => setLatitude(e.target.value)} className="w-full p-2.5 border rounded-lg" /></div>
+              <div><label className="block text-xs font-black mb-1">Longitud</label><input type="number" step="any" value={longitude} onChange={e => setLongitude(e.target.value)} className="w-full p-2.5 border rounded-lg" /></div>
+              <div className="md:col-span-2 flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg font-bold">Cancelar</button>
+                <button type="submit" className="px-5 py-2 bg-brand text-white rounded-lg font-black">{point ? 'Guardar cambios' : 'Agregar punto'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // --- SMART MATCH (ALGORITMO DE COINCIDENCIAS) VIEW ---
+    function SmartMatchView({ lostPets, foundPets, onSelectPet }) {
+      const calculateMatch = (lost, found) => {
+        let score = 0;
+        if (lost.species.toLowerCase() === found.species.toLowerCase()) score += 40;
+        if (lost.color.toLowerCase().includes(found.color.toLowerCase()) || found.color.toLowerCase().includes(lost.color.toLowerCase())) score += 25;
+        if (lost.size === found.size) score += 15;
+        if (lost.sex === found.sex) score += 10;
+        score += 10; 
+        return score;
+      };
+
+      const matches = [];
+      lostPets.forEach(lost => {
+        foundPets.forEach(found => {
+          const score = calculateMatch(lost, found);
+          if (score >= 40) {
+            matches.push({ lost, found, score });
+          }
+        });
+      });
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-gradient-to-r from-brand to-teal-800 text-white p-5 rounded-xl shadow-lg relative overflow-hidden">
+            <h2 className="text-2xl font-black flex items-center space-x-2 relative z-10">
+              <span>⚡ Smart Match - Sistema Inteligente de Coincidencias</span>
+            </h2>
+            <p className="text-xs text-teal-100 mt-1 max-w-2xl relative z-10">
+              Compara automáticamente atributos (especie, color, patrón, señas físicas y proximidad GPS) entre reportes de perdidos y encontrados para agilizar el reencuentro.
+            </p>
+          </div>
+
+          {matches.length === 0 ? (
+            <div className="bg-white p-8 text-center rounded-xl border border-gray-200 text-gray-500 text-sm">
+              No se detectaron parejas con alto porcentaje de coincidencia en este momento.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {matches.map(({ lost, found, score }, idx) => (
+                <div key={idx} className="bg-white p-4 rounded-xl border-2 border-brand/30 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+                  
+                  {/* LOST PET MINICARD */}
+                  <div className="flex items-center space-x-3 w-full md:w-1/3 bg-red-50 p-2 rounded-lg">
+                    <img src={lost.photo} className="w-16 h-16 rounded-lg object-cover" />
+                    <div>
+                      <span className="text-[10px] font-bold bg-alert text-white px-1.5 py-0.5 rounded">PERDIDO</span>
+                      <h4 className="font-bold text-sm text-gray-800">{lost.name}</h4>
+                      <p className="text-xs text-gray-500">{lost.species} • {lost.color}</p>
+                    </div>
+                  </div>
+
+                  {/* SCORE BADGE */}
+                  <div className="flex flex-col items-center">
+                    <div className="text-2xl font-black text-heartPink bg-pink-50 px-3.5 py-1 rounded-full border border-pink-200 shadow-sm">
+                      {score}%
+                    </div>
+                    <span className="text-[10px] text-gray-500 font-bold mt-1 uppercase tracking-wider">Coincidencia Probable</span>
+                  </div>
+
+                  {/* FOUND PET MINICARD */}
+                  <div className="flex items-center space-x-3 w-full md:w-1/3 bg-teal-50 p-2 rounded-lg">
+                    <img src={found.photo} className="w-16 h-16 rounded-lg object-cover" />
+                    <div>
+                      <span className="text-[10px] font-bold bg-brand text-white px-1.5 py-0.5 rounded">ENCONTRADO</span>
+                      <h4 className="font-bold text-sm text-gray-800">{found.breed}</h4>
+                      <p className="text-xs text-gray-500">{found.species} • {found.color}</p>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => onSelectPet(lost)}
+                    className="bg-brand hover:bg-brand-dark text-white text-xs font-bold px-3.5 py-2.5 rounded-xl whitespace-nowrap shadow"
+                  >
+                    Validar Caso →
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- PET DETAIL & SIGHTINGS LOG MODAL ---
+    function PetDetailModal({ pet, onClose, onAddSighting, showToast }) {
+      const isLost = pet.id.startsWith('L');
+      const [sightingLoc, setSightingLoc] = useState('');
+      const [sightingDesc, setSightingDesc] = useState('');
+
+      const handleSubmitSighting = (e) => {
+        e.preventDefault();
+        if (!sightingLoc || !sightingDesc) return;
+        const newSighting = {
+          id: 'S-' + Date.now(),
+          date: new Date().toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }),
+          location: sightingLoc,
+          description: sightingDesc,
+          photo: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=400&q=80'
+        };
+        onAddSighting(newSighting);
+        setSightingLoc('');
+        setSightingDesc('');
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            {/* CLOSE BUTTON */}
+            <button 
+              onClick={onClose}
+              className="absolute top-4 right-4 z-20 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 w-8 h-8 flex items-center justify-center font-bold text-sm transition"
+            >
+              ✕
+            </button>
+
+            {/* PET IMAGE HEADER */}
+            <div className="relative h-64 bg-slate-900">
+              <img src={pet.photo} alt={pet.name || 'Mascota'} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-6 text-white">
+                <span className={`self-start px-3 py-1 rounded-full text-xs font-bold uppercase mb-2 ${
+                  isLost ? 'bg-alert' : 'bg-brand'
+                }`}>
+                  {isLost ? '🔴 PERDIDA' : '🟢 ENCONTRADA / RESCATADA'}
+                </span>
+                <h2 className="text-2xl md:text-3xl font-black">{pet.name || `${pet.species} (${pet.breed})`}</h2>
+                <p className="text-xs text-gray-200 mt-1">📍 {pet.address || pet.foundLocation} • {pet.lostDate || pet.foundDate}</p>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* DETAILS GRID */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-gray-50 p-3 rounded-xl text-xs">
+                <div>
+                  <span className="text-gray-400 block font-semibold">ESPECIE / RAZA</span>
+                  <span className="font-bold text-gray-800">{pet.species} / {pet.breed}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block font-semibold">SEXO / EDAD</span>
+                  <span className="font-bold text-gray-800">{pet.sex} ({pet.age})</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block font-semibold">COLOR / TAMAÑO</span>
+                  <span className="font-bold text-gray-800">{pet.color} ({pet.size})</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block font-semibold">ESTADO ACTUAL</span>
+                  <span className="font-bold text-brand">{pet.status}</span>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-sm text-gray-800 mb-1">Descripción y Señas Particulares</h4>
+                <p className="text-xs text-gray-600 bg-white border border-gray-100 p-3 rounded-lg leading-relaxed">
+                  {pet.distinctiveMarks && <b>Señas: {pet.distinctiveMarks}. </b>}
+                  {pet.description}
+                </p>
+              </div>
+
+              {/* ACTION BUTTONS */}
+              <div className="flex flex-wrap gap-2">
+                <a 
+                  href={`tel:${pet.contactPhone}`}
+                  className="flex-1 bg-brand hover:bg-brand-dark text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center space-x-2 shadow"
+                >
+                  <span>📞 Contactar Tutor/Rescatista ({pet.contactPhone})</span>
+                </a>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard?.writeText(window.location.href);
+                    showToast('¡Enlace de reporte copiado al portapapeles!');
+                  }}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-4 rounded-xl text-xs"
+                >
+                  📲 Compartir Caso
+                </button>
+              </div>
+
+              {/* SIGHTINGS LOG (BITÁCORA DE AVISTAMIENTOS) */}
+              {isLost && (
+                <div className="border-t border-gray-200 pt-5 space-y-4">
+                  <h3 className="font-bold text-gray-800 text-base flex items-center space-x-2">
+                    <span>👁️ Bitácora de Avistamientos y Novedades</span>
+                  </h3>
+
+                  {pet.sightings && pet.sightings.length > 0 ? (
+                    <div className="space-y-3">
+                      {pet.sightings.map(s => (
+                        <div key={s.id} className="bg-pink-50/40 border border-pink-200 p-3 rounded-xl flex items-start space-x-3 text-xs">
+                          {s.photo && <img src={s.photo} className="w-14 h-14 rounded-lg object-cover" />}
+                          <div className="flex-1">
+                            <div className="flex justify-between items-center">
+                              <span className="font-bold text-heartPink">📍 {s.location}</span>
+                              <span className="text-[10px] text-gray-400">{s.date}</span>
+                            </div>
+                            <p className="text-gray-700 mt-1">{s.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No hay avistamientos registrados aún para esta búsqueda.</p>
+                  )}
+
+                  {/* FORM TO ADD NEW SIGHTING */}
+                  <form onSubmit={handleSubmitSighting} className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
+                    <h4 className="font-bold text-xs text-gray-700">¿Lo viste recientemente? Registra un avistamiento</h4>
+                    <input 
+                      type="text" 
+                      placeholder="Ubicación aproximada (Ej. Calle 72 con Cra 11)" 
+                      value={sightingLoc}
+                      onChange={(e) => setSightingLoc(e.target.value)}
+                      className="w-full text-xs p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand outline-none"
+                      required
+                    />
+                    <textarea 
+                      placeholder="Detalles (Ej. Tenía collar rojo, parecía asustado e iba hacia el parque)..." 
+                      value={sightingDesc}
+                      onChange={(e) => setSightingDesc(e.target.value)}
+                      className="w-full text-xs p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand outline-none"
+                      rows="2"
+                      required
+                    ></textarea>
+                    <button type="submit" className="bg-brand text-white font-bold text-xs px-4 py-2 rounded-lg shadow">
+                      + Publicar Avistamiento
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const COLOMBIA_LOCATIONS = {
+      "Amazonas":["Leticia","Puerto Nariño"],"Antioquia":["Medellín","Bello","Envigado","Itagüí","Rionegro","Apartadó"],
+      "Arauca":["Arauca","Saravena","Tame"],"Atlántico":["Barranquilla","Soledad","Malambo","Puerto Colombia"],
+      "Bogotá D.C.":["Bogotá"],"Bolívar":["Cartagena","Magangué","Turbaco"],"Boyacá":["Tunja","Duitama","Sogamoso","Chiquinquirá"],
+      "Caldas":["Manizales","La Dorada","Chinchiná"],"Caquetá":["Florencia","San Vicente del Caguán"],
+      "Casanare":["Yopal","Aguazul","Villanueva"],"Cauca":["Popayán","Santander de Quilichao"],"Cesar":["Valledupar","Aguachica"],
+      "Chocó":["Quibdó","Istmina"],"Córdoba":["Montería","Cereté","Lorica"],
+      "Cundinamarca":["Soacha","Chía","Zipaquirá","Facatativá","Fusagasugá"],"Guainía":["Inírida"],
+      "Guaviare":["San José del Guaviare"],"Huila":["Neiva","Pitalito","Garzón"],"La Guajira":["Riohacha","Maicao","Uribia"],
+      "Magdalena":["Santa Marta","Ciénaga","Fundación"],"Meta":["Villavicencio","Acacías","Granada"],"Nariño":["Pasto","Ipiales","Tumaco"],
+      "Norte de Santander":["Cúcuta","Ocaña","Villa del Rosario"],"Putumayo":["Mocoa","Puerto Asís"],"Quindío":["Armenia","Calarcá","Montenegro"],
+      "Risaralda":["Pereira","Dosquebradas","Santa Rosa de Cabal"],"San Andrés y Providencia":["San Andrés"],
+      "Santander":["Bucaramanga","Floridablanca","Girón","Barrancabermeja","Piedecuesta"],"Sucre":["Sincelejo","Corozal"],
+      "Tolima":["Ibagué","Espinal","Melgar"],"Valle del Cauca":["Cali","Buenaventura","Palmira","Tuluá","Buga","Cartago"],
+      "Vaupés":["Mitú"],"Vichada":["Puerto Carreño"]
+    };
+
+    const CITY_CENTER = {
+      Bogotá:[4.711,-74.072],Soacha:[4.579,-74.216],Chía:[4.862,-74.058],Medellín:[6.244,-75.581],
+      Cali:[3.452,-76.532],Bucaramanga:[7.119,-73.122],Barranquilla:[10.968,-74.781],
+      Cartagena:[10.391,-75.479],Pereira:[4.814,-75.695],Manizales:[5.068,-75.517],
+      Armenia:[4.534,-75.675],Ibagué:[4.438,-75.232],Villavicencio:[4.142,-73.626],
+      Neiva:[2.938,-75.28],Pasto:[1.214,-77.278],Cúcuta:[7.89,-72.496],Santa_Marta:[11.241,-74.205],
+      Montería:[8.75,-75.88],Sincelejo:[9.304,-75.397],Valledupar:[10.474,-73.243],Tunja:[5.535,-73.367]
+    };
+
+    // --- CREATE REPORT MODAL ---
+    function CreateReportModal({ initialType, onClose, onSubmitLost, onSubmitFound, onSubmitAid, isOffline }) {
+      const [type, setType] = useState(initialType);
+      const [species, setSpecies] = useState('Perro');
+      const [name, setName] = useState('');
+      const [breed, setBreed] = useState('');
+      const [color, setColor] = useState('');
+      const [description, setDescription] = useState('');
+      const [phone, setPhone] = useState('');
+      const [location, setLocation] = useState('Sector Chapinero Central');
+      const [department, setDepartment] = useState('');
+      const [city, setCity] = useState('');
+      const [reference, setReference] = useState('');
+      const [photo, setPhoto] = useState('');
+      const [photoName, setPhotoName] = useState('');
+
+      const handleSave = (e) => {
+        e.preventDefault();
+
+        if ((type === 'lost' || type === 'found') && !photo) {
+          alert('Debes subir una fotografía de la mascota.');
+          return;
+        }
+
+        if ((type === 'lost' || type === 'found') && (!department || !city || !reference)) {
+          alert('Selecciona departamento, ciudad/municipio y dirección o referencia.');
+          return;
+        }
+
+        const center = CITY_CENTER[city] || [4.6540, -74.0570];
+
+        const baseData = {
+          id: (type === 'lost' ? 'L-' : type === 'found' ? 'F-' : 'A-') + Date.now(),
+          species,
+          breed: breed || 'Mestizo',
+          color: color || 'No especificado',
+          description,
+          latitude: center[0],
+          longitude: center[1],
+          contactPhone: phone || '+57 300 000 0000',
+          photo: photo || 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=600&q=80',
+          status: type === 'lost' ? 'PERDIDA' : 'EN RESGUARDO'
+        };
+
+        if (type === 'lost') {
+          onSubmitLost({
+            ...baseData,
+            name: name || 'Sin Nombre',
+            address: `${reference}, ${city}, ${department}`,
+            department,
+            city,
+            reference,
+            lostDate: 'Hace instantes',
+            sightings: []
+          });
+        } else if (type === 'found') {
+          onSubmitFound({
+            ...baseData,
+            foundLocation: `${reference}, ${city}, ${department}`,
+            address: `${reference}, ${city}, ${department}`,
+            department,
+            city,
+            reference,
+            foundDate: 'Hace instantes'
+          });
+        } else {
+          onSubmitAid({
+            id: 'A-' + Date.now(),
+            item: name || 'Insumo Veterinario',
+            quantity: '10',
+            unit: 'Unidades',
+            priority: 'URGENTE',
+            location,
+            latitude: baseData.latitude,
+            longitude: baseData.longitude,
+            description,
+            contactName: 'Usuario Registrado',
+            status: 'PENDIENTE'
+          });
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 font-bold">✕</button>
+
+            <div className="flex items-center space-x-2 mb-2">
+              <BrandLogo size={32} />
+              <h3 className="text-xl font-black text-gray-800">
+                {type === 'lost' ? '🐾 Reportar Mascota Perdida' : type === 'found' ? '🐶 Reportar Mascota Encontrada' : '💖 Solicitar Ayuda'}
+              </h3>
+            </div>
+
+            {isOffline && (
+              <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded mb-3 font-medium">
+                ⚠️ Estás sin conexión. Este formulario se guardará localmente y se enviará automáticamente al reconectar.
+              </p>
+            )}
+
+            <form onSubmit={handleSave} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Especie</label>
+                <select value={species} onChange={(e) => setSpecies(e.target.value)} className="w-full p-2.5 border rounded-lg bg-gray-50">
+                  <option>Perro</option>
+                  <option>Gato</option>
+                  <option>Ave</option>
+                  <option>Conejo</option>
+                  <option>Otro</option>
+                </select>
+              </div>
+
+              {type === 'lost' && (
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Nombre de la Mascota</label>
+                  <input type="text" placeholder="Ej. Max" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-2.5 border rounded-lg" required />
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Raza Aprox.</label>
+                  <input type="text" placeholder="Ej. Criollo / Labrador" value={breed} onChange={(e) => setBreed(e.target.value)} className="w-full p-2.5 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Color Dominante</label>
+                  <input type="text" placeholder="Ej. Negro con blanco" value={color} onChange={(e) => setColor(e.target.value)} className="w-full p-2.5 border rounded-lg" required />
+                </div>
+              </div>
+
+              {(type === 'lost' || type === 'found') && (
+                <div className="border-2 border-dashed border-gray-300 bg-gray-50 rounded-xl p-3">
+                  <label className="block font-bold text-gray-700 mb-1">📸 Fotografía de la mascota *</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    required
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setPhotoName(file.name);
+                      const reader = new FileReader();
+                      reader.onload = () => setPhoto(reader.result);
+                      reader.readAsDataURL(file);
+                    }}
+                    className="w-full text-xs"
+                  />
+                  {photo && (
+                    <div className="mt-3">
+                      <img src={photo} alt="Vista previa de la mascota" className="w-full h-40 object-cover rounded-lg" />
+                      <p className="text-[10px] text-green-700 mt-1">✓ Foto cargada: {photoName}</p>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-gray-500 mt-1">Sube una foto clara para facilitar la identificación.</p>
+                </div>
+              )}
+
+              {(type === 'lost' || type === 'found') ? (
+                <div className="border border-teal-200 bg-teal-50 rounded-xl p-3 space-y-2">
+                  <label className="block font-bold text-gray-700 mb-1">📍 Ubicación / Barrio *</label>
+                  <p className="text-[10px] text-gray-600 mb-2">
+                    Selecciona primero el departamento, después la ciudad o municipio y finalmente una dirección o referencia.
+                    El mapa utiliza esta información para mejorar la precisión de la ubicación.
+                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <select
+                      value={department}
+                      onChange={(e) => { setDepartment(e.target.value); setCity(''); }}
+                      className="w-full p-2.5 border rounded-lg bg-white"
+                      required
+                    >
+                      <option value="">1. Departamento</option>
+                      {Object.keys(COLOMBIA_LOCATIONS).map(dep => <option key={dep}>{dep}</option>)}
+                    </select>
+
+                    <select
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="w-full p-2.5 border rounded-lg bg-white"
+                      disabled={!department}
+                      required
+                    >
+                      <option value="">2. Ciudad / Municipio</option>
+                      {(COLOMBIA_LOCATIONS[department] || []).map(c => <option key={c}>{c}</option>)}
+                    </select>
+
+                    <input
+                      type="text"
+                      placeholder="3. Dirección o referencia"
+                      value={reference}
+                      onChange={(e) => setReference(e.target.value)}
+                      className="w-full p-2.5 border rounded-lg bg-white"
+                      required
+                    />
+                  </div>
+
+                  <div className="bg-white border border-teal-100 rounded-lg p-2 text-[10px] text-gray-600">
+                    🗺️ <b>Ubicación en el mapa:</b> al publicar se utilizará el centro de la ciudad/municipio seleccionado.
+                    La dirección o referencia quedará asociada al reporte para facilitar la localización.
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Ubicación / Barrio</label>
+                  <input type="text" placeholder="Ej. Parque de Lourdes" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full p-2.5 border rounded-lg" required />
+                </div>
+              )}
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Teléfono de Contacto</label>
+                <input type="tel" placeholder="+57 300 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full p-2.5 border rounded-lg" required />
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Descripción / Detalles de la emergencia</label>
+                <textarea rows="3" placeholder="Describe señas físicas, collar, o estado de salud..." value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-2.5 border rounded-lg" required></textarea>
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2">
+                <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border text-gray-600 font-bold">Cancelar</button>
+                <button type="submit" className="px-5 py-2 rounded-lg bg-brand hover:bg-brand-dark text-white font-bold shadow">
+                  {isOffline ? 'Guardar Offline' : 'Publicar Reporte'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // --- ADMIN DASHBOARD ---
+    function AdminDashboard({ emergencyMode, setEmergencyMode, lostPets, foundPets, aidRequests }) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-slate-900 text-white p-5 rounded-xl shadow-lg flex justify-between items-center border-l-4 border-brand">
+            <div className="flex items-center space-x-3">
+              <BrandLogo size={40} />
+              <div>
+                <h2 className="text-xl font-bold">⚙️ Dashboard de Control & Moderación de Emergencias</h2>
+                <p className="text-xs text-slate-400">Panel administrativo central de "Animalistas de Corazón"</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setEmergencyMode(!emergencyMode)}
+              className={`px-4 py-2 rounded-lg font-bold text-xs ${emergencyMode ? 'bg-alert text-white' : 'bg-brand text-white'}`}
+            >
+              {emergencyMode ? '🚨 Alerta Activa (Sismo)' : '🟢 Estado Normal'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white p-4 rounded-xl border border-gray-200">
+              <h4 className="text-xs font-bold text-gray-500 uppercase">Total Búsquedas</h4>
+              <p className="text-3xl font-black text-alert">{lostPets.length}</p>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-gray-200">
+              <h4 className="text-xs font-bold text-gray-500 uppercase">Mascotas Rescatadas</h4>
+              <p className="text-3xl font-black text-brand">{foundPets.length}</p>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-gray-200">
+              <h4 className="text-xs font-bold text-gray-500 uppercase">Solicitudes Ayuda</h4>
+              <p className="text-3xl font-black text-heartPink">{aidRequests.length}</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border border-gray-200">
+            <h3 className="font-bold text-sm text-gray-800 mb-3">Moderación de Casos y Publicaciones</h3>
+            <div className="divide-y divide-gray-100 text-xs">
+              {lostPets.map(p => (
+                <div key={p.id} className="py-2.5 flex justify-between items-center">
+                  <span>🔴 [Perdido] <b>{p.name}</b> ({p.breed}) - {p.address}</span>
+                  <button className="text-red-600 font-bold hover:underline">Eliminar / Desactivar</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- TECHNICAL ARCHITECTURE & DATABASE SCHEMA DOC ---
+    function ArchitectureDocView() {
+      return (
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-6 text-gray-800">
+          <div className="flex items-center space-x-3">
+            <BrandLogo size={42} />
+            <div>
+              <h2 className="text-2xl font-black text-brand">🏗️ Arquitectura Técnica & Esquema de Base de Datos</h2>
+              <p className="text-xs text-gray-500">Documentación de ingeniería para "Animalistas de Corazón"</p>
+            </div>
+          </div>
+
+          {/* STACK OVERVIEW */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+            <div className="bg-teal-50 border border-teal-200 p-3 rounded-xl">
+              <b className="text-brand block mb-1">Mobile / Frontend</b>
+              <p>React Native + Expo + TypeScript + TailwindCSS / NativeWind. Caché local con AsyncStorage + IndexedDB (PWA).</p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl">
+              <b className="text-info block mb-1">Backend & API</b>
+              <p>NestJS (Node.js/TypeScript) o Supabase BaaS (PostgreSQL + Auth + Storage + Realtime WebSockets).</p>
+            </div>
+            <div className="bg-purple-50 border border-purple-200 p-3 rounded-xl">
+              <b className="text-purple-700 block mb-1">Base de Datos</b>
+              <p>PostgreSQL + Extensión PostGIS para indexado y consultas geofence de proximidad ráster/vectorial (ST_DWithin).</p>
+            </div>
+            <div className="bg-pink-50 border border-pink-200 p-3 rounded-xl">
+              <b className="text-heartPink block mb-1">Notificaciones & Cloud</b>
+              <p>Firebase Cloud Messaging (FCM) + AWS S3 / Cloudinary con procesamiento WebP progresivo de baja banda.</p>
+            </div>
+          </div>
+
+          {/* SQL SCHEMA SPECIFICATION */}
+          <div>
+            <h3 className="text-base font-bold text-gray-800 mb-2">1. Esquema Relacional PostgreSQL / PostGIS</h3>
+            <pre className="bg-slate-900 text-teal-300 p-4 rounded-xl text-xs overflow-x-auto font-mono leading-relaxed">
+{`-- Extensión Geoespacial
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- 1. TABLA DE USUARIOS
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    photo_url TEXT,
+    role VARCHAR(20) DEFAULT 'USER', -- 'USER', 'ADMIN', 'VOLUNTEER'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 2. TABLA MASCOTAS PERDIDAS
+CREATE TABLE lost_pets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(50) NOT NULL,
+    species VARCHAR(30) NOT NULL,
+    breed VARCHAR(50),
+    sex VARCHAR(10),
+    age VARCHAR(20),
+    size VARCHAR(20),
+    color VARCHAR(50) NOT NULL,
+    description TEXT,
+    distinctive_marks TEXT,
+    lost_date TIMESTAMP NOT NULL,
+    location_geom GEOMETRY(Point, 4326), -- PostGIS Point
+    address_text TEXT,
+    status VARCHAR(30) DEFAULT 'PERDIDA', -- 'PERDIDA', 'AVISTADA', 'ENCONTRADA', 'REUNIDA'
+    photo_url TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 3. BITÁCORA DE AVISTAMIENTOS
+CREATE TABLE sightings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lost_pet_id UUID REFERENCES lost_pets(id) ON DELETE CASCADE,
+    reporter_id UUID REFERENCES users(id),
+    description TEXT NOT NULL,
+    sighting_date TIMESTAMP DEFAULT NOW(),
+    location_geom GEOMETRY(Point, 4326),
+    photo_url TEXT
+);
+
+-- INDICE ESPACIAL SP-GIST PARA BÚSQUEDAS RÁPIDAS EN EMERGENCIAS
+CREATE INDEX idx_lost_pets_geo ON lost_pets USING GIST(location_geom);`}
+            </pre>
+          </div>
+
+          {/* SYNC & OFFLINE ARCHITECTURE */}
+          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs space-y-2">
+            <h3 className="font-bold text-gray-800 text-sm">2. Arquitectura de Sincronización Offline (Redes Lentas o Caídas)</h3>
+            <p className="text-gray-600">
+              Durante un sismo, la infraestructura 4G/5G suele colapsar. La plataforma implementa un patrón <b>Queue-and-Replay</b> con Service Workers:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 text-gray-700">
+              <li><b>Compresión Cliente:</b> Las imágenes tomadas por la cámara se comprimen localmente a máx 300KB (WebP / JPEG 60%).</li>
+              <li><b>IndexedDB Persistence:</b> Si el envío falla por falta de red, la petición HTTP mutation se encola localmente.</li>
+              <li><b>Background Sync API:</b> Tan pronto el SO móvil detecta conectividad (Ping a DNS 8.8.8.8), la cola procesa y sincroniza automáticamente los reportes guardados.</li>
+            </ul>
+          </div>
+        </div>
+      );
+    }
+
+    // Render App
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
